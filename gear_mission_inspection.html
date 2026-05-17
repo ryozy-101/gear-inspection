@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GEAR MISSION 組付け検査</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding: 6px; min-height: 100vh; }
+#app { width: 100%; max-width: 440px; padding-bottom: 10px; }
+h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0 6px; color: #111; }
+
+#tab-row { display: flex; gap: 0; margin-bottom: 6px; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }
+.tab-btn { flex: 1; padding: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: #f0f0f0; color: #888; }
+.tab-btn.active { background: #1D9E75; color: white; }
+
+#video-container {
+  position: relative; width: 100%;
+  height: 0; padding-top: 110%; /* 縦長 やや小さめ */
+  background: #111; border-radius: 12px; overflow: hidden; border: 2px solid #ddd;
+}
+#video {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+#canvas { display: none; }
+#zone-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.zone-box { position: absolute; border: 2px dashed rgba(255,255,255,0.7); border-radius: 4px; display: flex; align-items: flex-start; justify-content: flex-start; padding: 2px; }
+.zone-label { background: rgba(0,0,0,0.55); color: white; font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 3px; }
+#zone-gm  { top:8%;  left:5%;  width:90%; height:28%; border-color: rgba(255,220,0,0.8); }
+#zone-cyl { top:35%; left:25%; width:50%; height:22%; border-color: rgba(255,100,255,0.8); }
+#zone-oil { top:58%; left:3%;  width:26%; height:26%; border-color: rgba(100,200,255,0.8); }
+#zone-hdl { top:56%; left:33%; width:34%; height:30%; border-color: rgba(200,255,100,0.8); }
+#zone-cap { top:58%; left:71%; width:26%; height:26%; border-color: rgba(255,150,100,0.8); }
+
+#result-badge {
+  display: none; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  padding: 5px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.badge-ok { background: #1D9E75; color: white; }
+.badge-ng { background: #E24B4A; color: white; }
+.badge-wait { background: rgba(0,0,0,0.55); color: white; }
+
+#status-bar {
+  margin-top: 6px; padding: 8px 12px; border-radius: 12px;
+  border: 1px solid #ddd; background: white;
+  display: flex; align-items: center; gap: 8px; min-height: 46px;
+}
+#status-icon { font-size: 22px; width: 28px; text-align: center; flex-shrink: 0; }
+#status-title { font-size: 13px; font-weight: 600; color: #111; }
+#status-sub { font-size: 10px; color: #888; margin-top: 1px; }
+
+#btn-row { display: flex; gap: 6px; margin-top: 6px; }
+#btn-start, #btn-stop { flex: 1; padding: 10px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+#btn-start { background: #1D9E75; color: white; }
+#btn-stop { background: #eee; color: #333; display: none; }
+#btn-mirror { flex: 0 0 auto; padding: 10px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: #eee; color: #333; display: none; }
+#btn-mirror.active { background: #1D9E75; color: white; }
+
+#btn-alarm-stop {
+  width: 100%; padding: 12px; border-radius: 10px;
+  font-size: 15px; font-weight: 700; cursor: pointer; border: none;
+  background: #E24B4A; color: white; display: none; margin-top: 6px;
+  animation: pulse 0.6s infinite alternate;
+}
+@keyframes pulse { from { opacity:1; } to { opacity:0.6; } }
+
+#check-result-panel { margin-top: 10px; border-radius: 14px; border: 1px solid #ddd; background: white; overflow: hidden; display: none; }
+#check-result-title { padding: 9px 14px; font-size: 12px; font-weight: 700; background: #f8f8f8; border-bottom: 1px solid #eee; color: #333; }
+.check-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+.check-item:last-child { border-bottom: none; }
+.check-badge { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
+.check-label { flex: 1; color: #333; font-size: 12px; }
+.check-status { font-size: 11px; font-weight: 700; }
+.s-ok { color: #1D9E75; } .s-ng { color: #E24B4A; } .s-wait { color: #888; } .s-noreg { color: #bbb; }
+
+#counter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+.count-card { padding: 8px 10px; border-radius: 10px; border: 1px solid #ddd; background: white; text-align: center; }
+.count-label { font-size: 11px; color: #888; }
+.count-val { font-size: 22px; font-weight: 700; margin-top: 1px; }
+.ok-val { color: #1D9E75; } .ng-val { color: #E24B4A; }
+
+/* 登録タブ */
+#reg-panel { display: none; }
+.reg-section { margin-top: 10px; background: white; border-radius: 14px; border: 1px solid #ddd; overflow: hidden; }
+.reg-section-title { padding: 10px 14px; font-size: 13px; font-weight: 700; background: #f8f8f8; border-bottom: 1px solid #eee; color: #333; }
+.reg-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #f5f5f5; }
+.reg-item:last-child { border-bottom: none; }
+.reg-thumb { width: 56px; height: 42px; border-radius: 6px; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0; }
+.reg-thumb-empty { width: 56px; height: 42px; border-radius: 6px; border: 2px dashed #ccc; background: #f8f8f8; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #ccc; }
+.reg-info { flex: 1; }
+.reg-name { font-size: 13px; font-weight: 600; color: #111; }
+.reg-desc { font-size: 11px; color: #888; margin-top: 2px; }
+.reg-btn { padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: #2563EB; color: white; flex-shrink: 0; }
+.reg-btn.redo { background: #eee; color: #333; }
+.reg-btn.del { background: #fee2e2; color: #E24B4A; margin-left: 4px; }
+
+.save-badge { display: inline-block; margin-left: 8px; font-size: 10px; background: #1D9E75; color: white; padding: 2px 7px; border-radius: 10px; font-weight: 600; }
+
+/* 登録モーダル */
+#reg-camera-modal {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.88); z-index: 100;
+  flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+}
+#reg-video-wrap {
+  position: relative; width: 100%; max-width: 380px;
+  height: 0; padding-top: calc(min(380px, 100%) * 1.3333); /* 縦長 3:4 */
+  overflow: hidden; border-radius: 12px;
+}
+#reg-video {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 12px;
+}
+#reg-zone-highlight { position: absolute; border: 3px solid #FFD700; border-radius: 6px; pointer-events: none; }
+#reg-modal-label { color: white; font-size: 14px; font-weight: 700; margin-bottom: 8px; text-align: center; }
+#reg-modal-desc { color: #aaa; font-size: 12px; margin-bottom: 12px; text-align: center; line-height: 1.5; }
+#reg-capture-btn { padding: 14px 40px; border-radius: 50px; font-size: 16px; font-weight: 700; cursor: pointer; border: none; background: #E24B4A; color: white; margin-top: 14px; }
+#reg-cancel-btn { padding: 10px 30px; border-radius: 50px; font-size: 14px; cursor: pointer; border: none; background: #444; color: white; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>GEAR MISSION 組付け検査</h1>
+  <div id="tab-row">
+    <button class="tab-btn active" onclick="switchTab('inspect')">🔍 検査</button>
+    <button class="tab-btn" onclick="switchTab('register')">📷 NG登録</button>
+  </div>
+
+  <!-- 検査タブ -->
+  <div id="inspect-panel">
+    <div id="video-container">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="canvas"></canvas>
+      <div id="zone-overlay">
+        <div class="zone-box" id="zone-gm"><span class="zone-label">② GEAR MISSION</span></div>
+        <div class="zone-box" id="zone-cyl"><span class="zone-label">⑥燃焼筒</span></div>
+        <div class="zone-box" id="zone-oil"><span class="zone-label">③油量計</span></div>
+        <div class="zone-box" id="zone-hdl"><span class="zone-label">④ハンドル</span></div>
+        <div class="zone-box" id="zone-cap"><span class="zone-label">⑤キャップ</span></div>
+      </div>
+      <div id="result-badge" class="badge-wait">カメラを起動してください</div>
+    </div>
+
+    <div id="status-bar">
+      <div id="status-icon">📷</div>
+      <div id="status-text">
+        <div id="status-title">カメラを起動してください</div>
+        <div id="status-sub">「検査開始」ボタンを押してください</div>
+      </div>
+    </div>
+
+    <div id="btn-row">
+      <button id="btn-start" onclick="startCamera()">▶ 検査開始</button>
+      <button id="btn-stop" onclick="stopCamera()">⏹ 停止</button>
+      <button id="btn-mirror" onclick="toggleMirror()">🔄 切替</button>
+    </div>
+    <button id="btn-alarm-stop" onclick="stopAlarm()">🔕 アラーム停止（タップして解除）</button>
+
+    <div id="check-result-panel">
+      <div id="check-result-title">📋 検査結果</div>
+      <div class="check-item" id="r-item-1"><span class="check-badge">―</span><span class="check-label">① GEAR MISSION 上下方向（OCR）</span><span class="check-status s-wait">―</span></div>
+      <div class="check-item" id="r-item-2"><span class="check-badge">―</span><span class="check-label">② GEAR MISSION 組付け（OCR）</span><span class="check-status s-wait">―</span></div>
+      <div class="check-item" id="r-item-3"><span class="check-badge">―</span><span class="check-label">③ 油量計（画像比較）</span><span class="check-status s-noreg">未登録</span></div>
+      <div class="check-item" id="r-item-4"><span class="check-badge">―</span><span class="check-label">④ ハンドル（画像比較）</span><span class="check-status s-noreg">未登録</span></div>
+      <div class="check-item" id="r-item-5"><span class="check-badge">―</span><span class="check-label">⑤ 灯油キャップ（画像比較）</span><span class="check-status s-noreg">未登録</span></div>
+      <div class="check-item" id="r-item-6"><span class="check-badge">―</span><span class="check-label">⑥ 燃焼筒（画像比較）</span><span class="check-status s-noreg">未登録</span></div>
+    </div>
+
+    <div id="counter-row">
+      <div class="count-card"><div class="count-label">OK 件数</div><div class="count-val ok-val" id="ok-count">0</div></div>
+      <div class="count-card"><div class="count-label">NG 件数</div><div class="count-val ng-val" id="ng-count">0</div></div>
+    </div>
+  </div>
+
+  <!-- NG登録タブ -->
+  <div id="reg-panel">
+    <div class="reg-section">
+      <div class="reg-section-title">
+        📌 NG状態の画像を登録
+        <span class="save-badge">💾 自動保存</span>
+      </div>
+      <div class="reg-item">
+        <div class="reg-thumb-empty" id="thumb-3">＋</div>
+        <div class="reg-info"><div class="reg-name">③ 油量計 欠品NG</div><div class="reg-desc">油量計がない状態を撮影</div></div>
+        <button class="reg-btn" id="reg-btn-3" onclick="openRegModal(3)">登録</button>
+      </div>
+      <div class="reg-item">
+        <div class="reg-thumb-empty" id="thumb-4">＋</div>
+        <div class="reg-info"><div class="reg-name">④ ハンドル 欠品NG</div><div class="reg-desc">ハンドルがない状態を撮影</div></div>
+        <button class="reg-btn" id="reg-btn-4" onclick="openRegModal(4)">登録</button>
+      </div>
+      <div class="reg-item">
+        <div class="reg-thumb-empty" id="thumb-5">＋</div>
+        <div class="reg-info"><div class="reg-name">⑤ 灯油キャップ 欠品NG</div><div class="reg-desc">キャップがない状態を撮影</div></div>
+        <button class="reg-btn" id="reg-btn-5" onclick="openRegModal(5)">登録</button>
+      </div>
+      <div class="reg-item">
+        <div class="reg-thumb-empty" id="thumb-6">＋</div>
+        <div class="reg-info"><div class="reg-name">⑥ 燃焼筒 欠品NG</div><div class="reg-desc">燃焼筒がない状態を撮影</div></div>
+        <button class="reg-btn" id="reg-btn-6" onclick="openRegModal(6)">登録</button>
+      </div>
+    </div>
+    <div style="margin-top:10px; padding:12px 14px; background:#fffbe6; border-radius:12px; border:1px solid #ffe58f; font-size:12px; color:#7d6608; line-height:1.6;">
+      💡 <strong>登録のコツ</strong><br>
+      ・カメラを固定した状態で撮影してください<br>
+      ・検査時も同じ距離・角度で撮影すると精度が上がります<br>
+      ・登録画像はこの端末のSafariに自動保存されます<br>
+      ・画面を閉じても次回から自動で読み込まれます
+    </div>
+  </div>
+</div>
+
+<!-- NG登録モーダル -->
+<div id="reg-camera-modal">
+  <div id="reg-modal-label">欠品NG画像を登録</div>
+  <div id="reg-modal-desc">黄色い枠内に欠品部分が映るように合わせて撮影してください</div>
+  <div id="reg-video-wrap">
+    <video id="reg-video" autoplay playsinline muted></video>
+    <div id="reg-zone-highlight"></div>
+  </div>
+  <button id="reg-capture-btn" onclick="captureRegImage()">📸 この状態で登録</button>
+  <button id="reg-cancel-btn" onclick="closeRegModal()">キャンセル</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+// ===== 定数・変数 =====
+const COMPARE_W = 64, COMPARE_H = 48; // 比較用リサイズサイズ（端末依存しない固定サイズ）
+const NG_THRESHOLD = 0.72; // 類似度がこの値以上ならNG（0〜1）
+const ZONES = {
+  2: [0.08, 0.05, 0.90, 0.28],  // GEAR MISSION帯板
+  3: [0.58, 0.03, 0.26, 0.26],  // 油量計
+  4: [0.56, 0.33, 0.34, 0.30],  // ハンドル
+  5: [0.58, 0.71, 0.26, 0.26],  // キャップ
+  6: [0.35, 0.25, 0.50, 0.22],  // 燃焼筒
+};
+const STORAGE_KEYS = { 3: 'gm_ng_zone3', 4: 'gm_ng_zone4', 5: 'gm_ng_zone5', 6: 'gm_ng_zone6' };
+
+let stream = null, scanning = false, intervalId = null;
+let okCount = 0, ngCount = 0;
+let workerReady = false, worker = null, audioCtx = null;
+let lastResult = null, alarmActive = false, alarmInterval = null, mirrored = false;
+let regStream = null, regTargetZone = null;
+
+// NGテンプレート（固定サイズのImageDataとして保存）
+const ngTemplates = { 3: null, 4: null, 5: null, 6: null };
+
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const statusIcon = document.getElementById('status-icon');
+const statusTitle = document.getElementById('status-title');
+const statusSub = document.getElementById('status-sub');
+const statusBar = document.getElementById('status-bar');
+const resultBadge = document.getElementById('result-badge');
+const btnStart = document.getElementById('btn-start');
+const btnStop = document.getElementById('btn-stop');
+const okEl = document.getElementById('ok-count');
+const ngEl = document.getElementById('ng-count');
+
+// ===== localStorage 保存・読込 =====
+function saveTemplate(zoneIdx, dataURL) {
+  try { localStorage.setItem(STORAGE_KEYS[zoneIdx], dataURL); } catch(e) {}
+}
+function loadAllTemplates() {
+  for (const zoneIdx of [3, 4, 5]) {
+    try {
+      const dataURL = localStorage.getItem(STORAGE_KEYS[zoneIdx]);
+      if (dataURL) {
+        restoreTemplateFromDataURL(zoneIdx, dataURL);
+      }
+    } catch(e) {}
+  }
+}
+function deleteTemplate(zoneIdx) {
+  try { localStorage.removeItem(STORAGE_KEYS[zoneIdx]); } catch(e) {}
+  ngTemplates[zoneIdx] = null;
+  // サムネイルをリセット
+  const thumbEl = document.getElementById(`thumb-${zoneIdx}`);
+  const empty = document.createElement('div');
+  empty.className = 'reg-thumb-empty'; empty.id = `thumb-${zoneIdx}`; empty.textContent = '＋';
+  thumbEl.parentNode.replaceChild(empty, thumbEl);
+  const btn = document.getElementById(`reg-btn-${zoneIdx}`);
+  btn.textContent = '登録'; btn.className = 'reg-btn';
+  updateCheckItemRegStatus();
+}
+
+function restoreTemplateFromDataURL(zoneIdx, dataURL) {
+  const img = new Image();
+  img.onload = () => {
+    const tmp = document.createElement('canvas');
+    tmp.width = COMPARE_W; tmp.height = COMPARE_H;
+    tmp.getContext('2d').drawImage(img, 0, 0, COMPARE_W, COMPARE_H);
+    ngTemplates[zoneIdx] = tmp.getContext('2d').getImageData(0, 0, COMPARE_W, COMPARE_H);
+    // サムネイル復元
+    const thumbEl = document.getElementById(`thumb-${zoneIdx}`);
+    const imgEl = document.createElement('img');
+    imgEl.src = dataURL; imgEl.className = 'reg-thumb'; imgEl.id = `thumb-${zoneIdx}`;
+    if (thumbEl) thumbEl.parentNode.replaceChild(imgEl, thumbEl);
+    const btn = document.getElementById(`reg-btn-${zoneIdx}`);
+    if (btn) { btn.textContent = '再登録'; btn.className = 'reg-btn redo'; }
+    updateCheckItemRegStatus();
+  };
+  img.src = dataURL;
+}
+
+function updateCheckItemRegStatus() {
+  for (const zoneIdx of [3, 4, 5, 6]) {
+    const item = document.getElementById(`r-item-${zoneIdx}`);
+    if (!item) return;
+    const st = item.querySelector('.check-status');
+    if (!ngTemplates[zoneIdx]) {
+      st.textContent = '未登録'; st.className = 'check-status s-noreg';
+    }
+  }
+}
+
+// ===== タブ切替 =====
+function switchTab(tab) {
+  document.getElementById('inspect-panel').style.display = tab === 'inspect' ? 'block' : 'none';
+  document.getElementById('reg-panel').style.display = tab === 'register' ? 'block' : 'none';
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i===0&&tab==='inspect')||(i===1&&tab==='register'));
+  });
+}
+
+// ===== 音声 =====
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playOK() {
+  try {
+    const ac = getAudioCtx(), o = ac.createOscillator(), g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.frequency.setValueAtTime(880, ac.currentTime);
+    o.frequency.setValueAtTime(1100, ac.currentTime + 0.1);
+    g.gain.setValueAtTime(1.0, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.4);
+    o.start(); o.stop(ac.currentTime + 0.4);
+  } catch(e) {}
+}
+function playNGBeep() {
+  try {
+    const ac = getAudioCtx();
+    const wave = ac.createWaveShaper();
+    const curve = new Float32Array(256);
+    for (let i = 0; i < 256; i++) { const x=(i*2)/256-1; curve[i]=(Math.PI+400)*x/(Math.PI+400*Math.abs(x)); }
+    wave.curve = curve; wave.oversample = '4x';
+    const mg = ac.createGain(); mg.gain.setValueAtTime(2.0, ac.currentTime);
+    wave.connect(mg); mg.connect(ac.destination);
+    for (let i = 0; i < 3; i++) {
+      const o1=ac.createOscillator(), o2=ac.createOscillator(), g1=ac.createGain();
+      o1.type='sawtooth'; o2.type='square';
+      o1.frequency.setValueAtTime(440, ac.currentTime+i*0.25);
+      o2.frequency.setValueAtTime(443, ac.currentTime+i*0.25);
+      g1.gain.setValueAtTime(1.0, ac.currentTime+i*0.25);
+      g1.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+i*0.25+0.22);
+      o1.connect(g1); o2.connect(g1); g1.connect(wave);
+      o1.start(ac.currentTime+i*0.25); o1.stop(ac.currentTime+i*0.25+0.22);
+      o2.start(ac.currentTime+i*0.25); o2.stop(ac.currentTime+i*0.25+0.22);
+    }
+  } catch(e) {}
+}
+function startAlarm() {
+  if (alarmActive) return;
+  alarmActive = true;
+  document.getElementById('btn-alarm-stop').style.display = 'block';
+  playNGBeep();
+  alarmInterval = setInterval(() => { if (alarmActive) playNGBeep(); }, 1000);
+}
+function stopAlarm() {
+  alarmActive = false; clearInterval(alarmInterval); alarmInterval = null;
+  document.getElementById('btn-alarm-stop').style.display = 'none';
+  lastResult = null; setStatus('scanning');
+}
+
+// ===== カメラ =====
+function toggleMirror() {
+  mirrored = !mirrored;
+  const btn = document.getElementById('btn-mirror');
+  btn.classList.toggle('active', mirrored);
+  btn.textContent = mirrored ? '📷前面' : '🔄切替';
+  restartCamera();
+}
+async function restartCamera() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  clearInterval(intervalId);
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mirrored?'user':'environment', width:{ideal:960}, height:{ideal:1280}, aspectRatio:{ideal:0.75} } });
+    video.srcObject = stream;
+    intervalId = setInterval(runInspection, 1500);
+  } catch(e) { statusSub.textContent = 'カメラの切り替えに失敗しました'; }
+}
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment', width:{ideal:960}, height:{ideal:1280}, aspectRatio:{ideal:0.75} } });
+    video.srcObject = stream; scanning = true;
+    btnStart.style.display = 'none'; btnStop.style.display = 'block';
+    document.getElementById('btn-mirror').style.display = 'block';
+    document.getElementById('check-result-panel').style.display = 'block';
+    resultBadge.style.display = 'block';
+    setStatus('scanning');
+    if (!workerReady) { statusSub.textContent = 'OCRエンジン初期化中...'; await initWorker(); }
+    intervalId = setInterval(runInspection, 1500);
+  } catch(e) { statusTitle.textContent = 'カメラへのアクセスを許可してください'; statusSub.textContent = 'ブラウザの設定でカメラを許可してください'; }
+}
+function stopCamera() {
+  scanning = false; clearInterval(intervalId);
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  video.srcObject = null;
+  btnStart.style.display = 'block'; btnStop.style.display = 'none';
+  document.getElementById('btn-mirror').style.display = 'none';
+  document.getElementById('btn-mirror').textContent = '🔄切替';
+  mirrored = false; stopAlarm(); setStatus('idle');
+}
+
+// ===== ステータス =====
+function setStatus(type, sub) {
+  statusBar.style.border = ''; resultBadge.style.display = 'block'; resultBadge.className = '';
+  if (type==='ok') {
+    statusIcon.textContent='✅'; statusTitle.textContent='OK — 正常な組付け'; statusTitle.style.color='#1D9E75';
+    statusSub.textContent=sub||'全項目正常です'; statusBar.style.border='2px solid #1D9E75';
+    resultBadge.className='badge-ok'; resultBadge.textContent='✓ OK';
+  } else if (type==='ng') {
+    statusIcon.textContent='🚨'; statusTitle.textContent='NG — 要確認！'; statusTitle.style.color='#E24B4A';
+    statusSub.textContent=sub||'組付けを確認してください'; statusBar.style.border='2px solid #E24B4A';
+    resultBadge.className='badge-ng'; resultBadge.textContent='✗ NG';
+  } else if (type==='scanning') {
+    statusIcon.textContent='🔍'; statusTitle.textContent='検査中...'; statusTitle.style.color='#111';
+    statusSub.textContent='製品全体を枠内に収めてください';
+    resultBadge.className='badge-wait'; resultBadge.textContent='検査中...';
+  } else {
+    statusIcon.textContent='📷'; statusTitle.textContent='カメラを起動してください'; statusTitle.style.color='#111';
+    statusSub.textContent='「検査開始」ボタンを押してください'; resultBadge.style.display='none';
+  }
+}
+function setCheckItem(idx, status) {
+  const item = document.getElementById(`r-item-${idx}`);
+  const badge = item.querySelector('.check-badge'), st = item.querySelector('.check-status');
+  if (status==='ok') { badge.textContent='✅'; st.textContent='OK'; st.className='check-status s-ok'; item.style.background='#f0faf5'; }
+  else if (status==='ng') { badge.textContent='❌'; st.textContent='NG！'; st.className='check-status s-ng'; item.style.background='#fff0f0'; }
+  else if (status==='noreg') { badge.textContent='―'; st.textContent='未登録'; st.className='check-status s-noreg'; item.style.background=''; }
+  else { badge.textContent='―'; st.textContent='―'; st.className='check-status s-wait'; item.style.background=''; }
+}
+
+// ===== OCR =====
+async function initWorker() {
+  try { worker = await Tesseract.createWorker('eng', 1, { logger: ()=>{} }); workerReady = true; }
+  catch(e) { statusSub.textContent = 'OCRエンジンの初期化に失敗しました'; }
+}
+
+// ===== ゾーン抽出（固定サイズにリサイズして端末依存を排除）=====
+function extractZoneAsImageData(srcCanvas, zoneIdx) {
+  const z = ZONES[zoneIdx];
+  const w = srcCanvas.width, h = srcCanvas.height;
+  const zx=Math.round(z[1]*w), zy=Math.round(z[0]*h), zw=Math.round(z[2]*w), zh=Math.round(z[3]*h);
+  // 固定サイズ(64x48)にリサイズして保存 → 端末が変わっても同じサイズで比較できる
+  const tmp = document.createElement('canvas');
+  tmp.width = COMPARE_W; tmp.height = COMPARE_H;
+  tmp.getContext('2d').drawImage(srcCanvas, zx, zy, zw, zh, 0, 0, COMPARE_W, COMPARE_H);
+  return tmp.getContext('2d').getImageData(0, 0, COMPARE_W, COMPARE_H);
+}
+
+// ===== 画像比較（ピクセル差分・固定サイズ同士の比較）=====
+function compareImageData(id1, id2) {
+  let diff = 0;
+  const len = id1.data.length;
+  for (let i = 0; i < len; i += 4) {
+    diff += Math.abs(id1.data[i]-id2.data[i]) + Math.abs(id1.data[i+1]-id2.data[i+1]) + Math.abs(id1.data[i+2]-id2.data[i+2]);
+  }
+  const maxDiff = COMPARE_W * COMPARE_H * 3 * 255;
+  return 1 - (diff / maxDiff); // 類似度 0〜1
+}
+
+// ===== メイン検査処理 =====
+async function runInspection() {
+  if (!scanning || !workerReady || video.videoWidth === 0) return;
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+
+  const results = { 1:null, 2:null, 3:null, 4:null, 5:null, 6:null };
+  let hasNG = false;
+
+  // ①② OCR判定
+  try {
+    const w=canvas.width, h=canvas.height, z=ZONES[2];
+    const result = await worker.recognize(canvas.toDataURL('image/png'), {
+      rectangle: { top:Math.round(z[0]*h), left:Math.round(z[1]*w), width:Math.round(z[2]*w), height:Math.round(z[3]*h) }
+    });
+    const text = result.data.text.toUpperCase().replace(/\s+/g,' ').trim();
+    const hasNormal = /GEAR\s*MISSION/.test(text);
+    const hasReversed = /NOISSIM|RAEG|NOISS/.test(text);
+    if (hasNormal && !hasReversed) { results[1]='ok'; results[2]='ok'; }
+    else if (hasReversed) { results[1]='ng'; results[2]='ok'; hasNG=true; }
+    else { results[1]=null; results[2]=null; }
+  } catch(e) {}
+
+  // ③④⑤⑥ テンプレートマッチング（固定サイズで比較）
+  for (const zoneIdx of [3,4,5,6]) {
+    if (!ngTemplates[zoneIdx]) { results[zoneIdx]='noreg'; }
+    else {
+      const currentID = extractZoneAsImageData(canvas, zoneIdx);
+      const similarity = compareImageData(currentID, ngTemplates[zoneIdx]);
+      results[zoneIdx] = similarity >= NG_THRESHOLD ? 'ng' : 'ok';
+      if (results[zoneIdx]==='ng') hasNG = true;
+    }
+  }
+
+  for (let i=1; i<=6; i++) setCheckItem(i, results[i] || (i<=2?null:'noreg'));
+
+  const valid = Object.values(results).filter(v => v!==null && v!=='noreg');
+  if (valid.length===0) { if (!alarmActive) setStatus('scanning'); return; }
+
+  if (hasNG) {
+    if (lastResult!=='ng') {
+      lastResult='ng'; ngCount++; ngEl.textContent=ngCount;
+      const msgs=[];
+      if (results[1]==='ng') msgs.push('上下逆');
+      if (results[2]==='ng') msgs.push('帯板欠品');
+      if (results[3]==='ng') msgs.push('油量計欠品');
+      if (results[4]==='ng') msgs.push('ハンドル欠品');
+      if (results[5]==='ng') msgs.push('キャップ欠品');
+      if (results[6]==='ng') msgs.push('燃焼筒欠品');
+      setStatus('ng', msgs.join('・')); startAlarm();
+    }
+  } else {
+    if (lastResult!=='ok') { lastResult='ok'; okCount++; okEl.textContent=okCount; setStatus('ok'); playOK(); }
+  }
+}
+
+// ===== NG登録モーダル =====
+function openRegModal(zoneIdx) {
+  regTargetZone = zoneIdx;
+  const modal = document.getElementById('reg-camera-modal');
+  modal.style.display = 'flex';
+  const labels = {3:'③ 油量計 欠品NG', 4:'④ ハンドル 欠品NG', 5:'⑤ 灯油キャップ 欠品NG', 6:'⑥ 燃焼筒 欠品NG'};
+  document.getElementById('reg-modal-label').textContent = labels[zoneIdx] + ' を登録';
+  navigator.mediaDevices.getUserMedia({ video:{facingMode:'environment', width:{ideal:960}, height:{ideal:1280}, aspectRatio:{ideal:0.75}} })
+    .then(s => {
+      regStream = s;
+      const rv = document.getElementById('reg-video');
+      rv.srcObject = s;
+      rv.onloadedmetadata = () => updateRegZoneHighlight();
+    }).catch(() => { document.getElementById('reg-modal-desc').textContent = 'カメラのアクセスを許可してください'; });
+}
+function updateRegZoneHighlight() {
+  const wrap = document.getElementById('reg-video-wrap');
+  const hl = document.getElementById('reg-zone-highlight');
+  const z = ZONES[regTargetZone];
+  const vw = wrap.offsetWidth;
+  const vh = vw * (4 / 3); // 縦長 3:4
+  hl.style.left=(z[1]*vw)+'px'; hl.style.top=(z[0]*vh)+'px';
+  hl.style.width=(z[2]*vw)+'px'; hl.style.height=(z[3]*vh)+'px';
+}
+function captureRegImage() {
+  const rv = document.getElementById('reg-video');
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width = rv.videoWidth; tmpCanvas.height = rv.videoHeight;
+  tmpCanvas.getContext('2d').drawImage(rv, 0, 0);
+
+  // ゾーン切り出し → 固定サイズ(64x48)にリサイズしてImageDataとして保存
+  const z = ZONES[regTargetZone];
+  const w=tmpCanvas.width, h=tmpCanvas.height;
+  const zx=Math.round(z[1]*w), zy=Math.round(z[0]*h), zw=Math.round(z[2]*w), zh=Math.round(z[3]*h);
+  const normCanvas = document.createElement('canvas');
+  normCanvas.width = COMPARE_W; normCanvas.height = COMPARE_H;
+  normCanvas.getContext('2d').drawImage(tmpCanvas, zx, zy, zw, zh, 0, 0, COMPARE_W, COMPARE_H);
+  ngTemplates[regTargetZone] = normCanvas.getContext('2d').getImageData(0, 0, COMPARE_W, COMPARE_H);
+
+  // localStorageに保存（DataURL形式）
+  const thumbCanvas = document.createElement('canvas');
+  thumbCanvas.width = zw; thumbCanvas.height = zh;
+  thumbCanvas.getContext('2d').drawImage(tmpCanvas, zx, zy, zw, zh, 0, 0, zw, zh);
+  const dataURL = thumbCanvas.toDataURL('image/jpeg', 0.7);
+  saveTemplate(regTargetZone, dataURL);
+
+  // サムネイル表示
+  const thumbEl = document.getElementById(`thumb-${regTargetZone}`);
+  const imgEl = document.createElement('img');
+  imgEl.src = dataURL; imgEl.className = 'reg-thumb'; imgEl.id = `thumb-${regTargetZone}`;
+  thumbEl.parentNode.replaceChild(imgEl, thumbEl);
+  const btn = document.getElementById(`reg-btn-${regTargetZone}`);
+  btn.textContent = '再登録'; btn.className = 'reg-btn redo';
+
+  closeRegModal();
+  alert(`✅ 登録完了！\n次回からSafariを閉じても自動で読み込まれます。`);
+}
+function closeRegModal() {
+  document.getElementById('reg-camera-modal').style.display = 'none';
+  if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
+}
+
+// ===== 起動時にlocalStorageから読込 =====
+function loadAllTemplates() {
+  for (const zoneIdx of [3, 4, 5, 6]) {
+    try {
+      const dataURL = localStorage.getItem(STORAGE_KEYS[zoneIdx]);
+      if (dataURL) { restoreTemplateFromDataURL(zoneIdx, dataURL); }
+    } catch(e) {}
+  }
+}
+async function initWorker() {
+  try { worker = await Tesseract.createWorker('eng', 1, { logger: ()=>{} }); workerReady = true; }
+  catch(e) { statusSub.textContent = 'OCRエンジンの初期化に失敗しました'; }
+}
+
+loadAllTemplates();
+initWorker();
+</script>
+</body>
+</html>
