@@ -98,8 +98,13 @@ h1 { font-size: 16px; font-weight: 600; text-align: center; padding: 10px 0 8px;
   background: rgba(0,0,0,0.88); z-index: 100;
   flex-direction: column; align-items: center; justify-content: center; padding: 20px;
 }
-#reg-video-wrap { position: relative; width: 100%; max-width: 380px; }
-#reg-video { width: 100%; border-radius: 12px; display: block; }
+#reg-video-wrap {
+  position: relative; width: 100%; max-width: 380px;
+  aspect-ratio: 4/3; overflow: hidden; border-radius: 12px;
+}
+#reg-video {
+  width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 12px;
+}
 #reg-zone-highlight { position: absolute; border: 3px solid #FFD700; border-radius: 6px; pointer-events: none; }
 #reg-modal-label { color: white; font-size: 14px; font-weight: 700; margin-bottom: 8px; text-align: center; }
 #reg-modal-desc { color: #aaa; font-size: 12px; margin-bottom: 12px; text-align: center; line-height: 1.5; }
@@ -534,12 +539,11 @@ function openRegModal(zoneIdx) {
     }).catch(() => { document.getElementById('reg-modal-desc').textContent = 'カメラのアクセスを許可してください'; });
 }
 function updateRegZoneHighlight() {
-  const rv = document.getElementById('reg-video');
   const wrap = document.getElementById('reg-video-wrap');
   const hl = document.getElementById('reg-zone-highlight');
   const z = ZONES[regTargetZone];
   const vw = wrap.offsetWidth;
-  const vh = vw * (rv.videoHeight && rv.videoWidth ? rv.videoHeight/rv.videoWidth : 0.75);
+  const vh = vw * (3 / 4); // 常に4:3固定
   hl.style.left=(z[1]*vw)+'px'; hl.style.top=(z[0]*vh)+'px';
   hl.style.width=(z[2]*vw)+'px'; hl.style.height=(z[3]*vh)+'px';
 }
