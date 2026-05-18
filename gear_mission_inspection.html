@@ -393,13 +393,33 @@ async function runInspection(){
   const results={1:null,2:null,3:null,4:null,5:null,6:null};let hasNG=false;
   try{
     const w=canvas.width,h=canvas.height,z=ZONES[2];
-    const result=await worker.recognize(canvas.toDataURL('image/png'),{
-      rectangle:{top:Math.round(z[0]*h),left:Math.round(z[1]*w),width:Math.round(z[2]*w),height:Math.round(z[3]*h)}});
-    const text=result.data.text.toUpperCase().replace(/\s+/g,' ').trim();
-    const hasNormal=/GEAR\s*MISSION/.test(text);const hasReversed=/NOISSIM|RAEG|NOISS/.test(text);
-    if(hasNormal&&!hasReversed){results[1]='ok';results[2]='ok';}
-    else if(hasReversed){results[1]='ng';results[2]='ok';hasNG=true;}
-    else{results[1]=null;results[2]=null;}
+    const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
+    const zoneCanvas=document.createElement('canvas');
+    zoneCanvas.width=zw*2;zoneCanvas.height=zh*2;
+    const zc=zoneCanvas.getContext('2d');
+    zc.drawImage(canvas,zx,zy,zw,zh,0,0,zw*2,zh*2);
+    const id=zc.getImageData(0,0,zoneCanvas.width,zoneCanvas.height);
+    for(let i=0;i<id.data.length;i+=4){
+      const g=0.299*id.data[i]+0.587*id.data[i+1]+0.114*id.data[i+2];
+      id.data[i]=id.data[i+1]=id.data[i+2]=g<128?0:255;
+    }
+    zc.putImageData(id,0,0);
+    const rotCanvas=document.createElement('canvas');
+    rotCanvas.width=zoneCanvas.width;rotCanvas.height=zoneCanvas.height;
+    const rc=rotCanvas.getContext('2d');
+    rc.translate(rotCanvas.width/2,rotCanvas.height/2);rc.rotate(Math.PI);
+    rc.drawImage(zoneCanvas,-rotCanvas.width/2,-rotCanvas.height/2);
+    const [rNormal,rFlipped]=await Promise.all([
+      worker.recognize(zoneCanvas.toDataURL()),
+      worker.recognize(rotCanvas.toDataURL())
+    ]);
+    const tN=rNormal.data.text.toUpperCase();
+    const tF=rFlipped.data.text.toUpperCase();
+    const scoreN=['GEAR','MISSION','GEA','MIS'].filter(k=>tN.includes(k)).length;
+    const scoreF=['GEAR','MISSION','GEA','MIS'].filter(k=>tF.includes(k)).length;
+    if(scoreN===0&&scoreF===0){results[1]=null;results[2]=null;}
+    else if(scoreF>scoreN){results[1]='ng';results[2]='ok';hasNG=true;}
+    else{results[1]='ok';results[2]='ok';} 
   }catch(e){}
   for(const zoneIdx of [3,4,5,6]){
     if(!ngTemplates[zoneIdx]){results[zoneIdx]='noreg';}
