@@ -57,7 +57,7 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 #btn-mirror.active { background: #1D9E75; color: white; }
 
 #btn-edit-zone {
-  width:100%; padding:8px; margin-top:6px; border-radius:10px;
+  width:100%; padding:8px; margin-top:4px; margin-bottom:6px; border-radius:10px;
   font-size:13px; font-weight:600; cursor:pointer;
   border:1px dashed #aaa; background:#fff; color:#555;
 }
@@ -94,6 +94,9 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 <div id="app">
   <h1>GEAR MISSION 上下検査</h1>
 
+  <button id="btn-edit-zone" onclick="toggleEditMode()">✏️ 枠の位置・サイズを調整する</button>
+  <div id="edit-hint">📌 枠をドラッグ→移動　角の白い四角をドラッグ→サイズ変更<br>調整完了後「調整完了」を押すと保存されます。</div>
+
   <div id="video-container">
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
@@ -120,8 +123,6 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
     <button id="btn-mirror" onclick="toggleMirror()">🔄 切替</button>
   </div>
 
-  <button id="btn-edit-zone" onclick="toggleEditMode()">✏️ 枠の位置・サイズを調整する</button>
-  <div id="edit-hint">📌 枠をドラッグ→移動　角の白い四角をドラッグ→サイズ変更<br>調整完了後「調整完了」を押すと保存されます。</div>
   <button id="btn-alarm-stop" onclick="stopAlarm()">🔕 アラーム停止（タップして解除）</button>
 
   <div id="check-result-panel">
