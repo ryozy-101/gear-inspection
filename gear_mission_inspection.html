@@ -10,10 +10,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-ser
 #app { width: 100%; max-width: 440px; padding-bottom: 10px; }
 h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; color: #111; }
 
+/* モード切替 */
 #mode-row { display: flex; margin-bottom: 6px; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }
 .mode-btn { flex: 1; padding: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: #f0f0f0; color: #888; }
 .mode-btn.active { background: #2563EB; color: white; }
 
+/* 色選択 */
+#color-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.color-btn { flex: 1; padding: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: 2px solid #ddd; border-radius: 10px; background: #f8f8f8; color: #555; text-align: center; }
+.color-btn.active { border-color: #2563EB; background: #eff6ff; color: #2563EB; }
+.color-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+
+/* タブ */
 #tab-row { display: flex; margin-bottom: 6px; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }
 .tab-btn { flex: 1; padding: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: #f0f0f0; color: #888; }
 .tab-btn.active { background: #1D9E75; color: white; }
@@ -93,6 +101,7 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 .count-val { font-size: 22px; font-weight: 700; margin-top: 1px; }
 .ok-val { color: #1D9E75; } .ng-val { color: #E24B4A; }
 
+/* 登録タブ */
 #reg-panel { display: none; }
 .reg-section { margin-top: 8px; background: white; border-radius: 12px; border: 1px solid #ddd; overflow: hidden; }
 .reg-section-title { padding: 9px 12px; font-size: 12px; font-weight: 700; background: #f8f8f8; border-bottom: 1px solid #eee; color: #333; }
@@ -107,11 +116,16 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 .reg-btn.redo { background: #eee; color: #333; }
 .reg-del-btn { padding: 6px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; border: none; background: #fee2e2; color: #E24B4A; flex-shrink: 0; }
 .save-badge { display: inline-block; margin-left: 6px; font-size: 10px; background: #1D9E75; color: white; padding: 2px 6px; border-radius: 10px; font-weight: 600; }
+.color-badge { display: inline-block; margin-left: 4px; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 600; }
+.color-badge-olive { background: #4a7c59; color: white; }
+.color-badge-black { background: #333; color: white; }
+.color-badge-coyote { background: #b5904a; color: white; }
 
 #add-item-form { padding: 10px 12px; background: #f8f8f8; border-top: 1px solid #eee; display: flex; gap: 6px; align-items: center; }
 #add-item-input { flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 12px; background: white; }
 #add-item-btn { padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: #1D9E75; color: white; white-space: nowrap; }
 
+/* 登録モーダル */
 #reg-camera-modal {
   display: none; position: fixed; top:0; left:0; right:0; bottom:0;
   background: rgba(0,0,0,0.9); z-index: 100;
@@ -135,16 +149,26 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 <div id="app">
   <h1>GEAR MISSION 組付け検査</h1>
 
+  <!-- モード切替 -->
   <div id="mode-row">
     <button class="mode-btn active" onclick="setMode('ocr')">🔤 OCRのみ</button>
     <button class="mode-btn" onclick="setMode('full')">🔍 全機能</button>
   </div>
 
+  <!-- 色選択（全機能モードのみ表示） -->
+  <div id="color-row" style="display:none;">
+    <button class="color-btn active" id="cbtn-olive" onclick="setColor('olive')"><span class="color-dot" style="background:#4a7c59;"></span>オリーブ</button>
+    <button class="color-btn" id="cbtn-black" onclick="setColor('black')"><span class="color-dot" style="background:#333;"></span>ブラック</button>
+    <button class="color-btn" id="cbtn-coyote" onclick="setColor('coyote')"><span class="color-dot" style="background:#b5904a;"></span>コヨーテ</button>
+  </div>
+
+  <!-- タブ（全機能モードのみ表示） -->
   <div id="tab-row" style="display:none;">
     <button class="tab-btn active" onclick="switchTab('inspect')">🔍 検査</button>
     <button class="tab-btn" onclick="switchTab('register')">📷 NG登録</button>
   </div>
 
+  <!-- 検査パネル -->
   <div id="inspect-panel">
     <button id="btn-edit-zone" onclick="toggleEditMode()">✏️ 枠の位置・サイズを調整する</button>
     <div id="edit-hint">📌 枠をドラッグ→移動　角の白い四角をドラッグ→サイズ変更<br>調整完了後「調整完了」を押すと保存されます。</div>
@@ -197,25 +221,35 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
     <button onclick="toggleDebug()" style="width:100%;margin-top:6px;padding:6px;border-radius:8px;border:1px solid #ccc;background:#fff;font-size:11px;color:#888;cursor:pointer;">🔬 デバッグ表示 ON/OFF</button>
   </div>
 
-  <div id="reg-panel">
-    <div class="reg-section">
-      <div class="reg-section-title">📌 NG状態の画像を登録 <span class="save-badge">💾 自動保存</span></div>
+  <!-- NG登録タブ -->
+  <div id="reg-panel" style="display:none;">
+    <!-- 色ごとの登録（油タンク） -->
+    <div class="reg-section" id="color-reg-section">
+      <div class="reg-section-title" id="color-reg-title">🎨 油タンク 色別NG登録 <span class="save-badge">💾 自動保存</span></div>
+      <div id="color-reg-items"></div>
+    </div>
+
+    <!-- 共通部品登録 -->
+    <div class="reg-section" style="margin-top:8px;">
+      <div class="reg-section-title">🔧 共通部品 NG登録 <span class="save-badge">💾 自動保存</span></div>
       <div id="reg-items-container"></div>
       <div id="add-item-form">
         <input type="text" id="add-item-input" placeholder="部品名を入力（例：フィルター）" maxlength="20">
         <button id="add-item-btn" onclick="addRegItem()">＋ 追加</button>
       </div>
     </div>
+
     <div style="margin-top:8px; padding:10px 12px; background:#fffbe6; border-radius:10px; border:1px solid #ffe58f; font-size:11px; color:#7d6608; line-height:1.7;">
       ⚠️ <strong>正しい運用手順</strong><br>
       ① 検査タブで枠の位置・サイズを調整して「調整完了」<br>
-      ② NG登録タブで各部品の欠品状態を登録<br>
-      ③ 検査開始<br>
+      ② NG登録タブで油タンク（色別）と共通部品を登録<br>
+      ③ 検査タブで色を選択して検査開始<br>
       ※枠を調整したら必ずNG登録をやり直してください
     </div>
   </div>
 </div>
 
+<!-- NG登録モーダル -->
 <div id="reg-camera-modal">
   <div id="reg-modal-label">欠品NG画像を登録</div>
   <div id="reg-modal-desc">黄色い枠内に欠品部分が映るように合わせて撮影してください</div>
@@ -229,20 +263,29 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
-const COMPARE_W=64,COMPARE_H=64,NG_THRESHOLD=0.72;
+const COMPARE_W=64, COMPARE_H=64, NG_THRESHOLD=0.72;
 const ZONE_STORAGE_KEY='gm_zone_2';
 const ITEMS_STORAGE_KEY='gm_reg_items';
 const MODE_STORAGE_KEY='gm_mode';
+const COLOR_STORAGE_KEY='gm_color';
+const COLORS=['olive','black','coyote'];
+const COLOR_LABELS={olive:'オリーブ',black:'ブラック',coyote:'コヨーテ'};
+const COLOR_STYLES={olive:'color-badge-olive',black:'color-badge-black',coyote:'color-badge-coyote'};
 
 let ZONE_GM=[0.18,0.05,0.88,0.22];
+// 共通部品リスト [{id, name, zone, template, dataURL}]
 let regItems=[];
 let nextItemId=1;
+// 色別油タンクNG [{color, template, dataURL}]
+let colorTemplates={olive:{template:null,dataURL:null},black:{template:null,dataURL:null},coyote:{template:null,dataURL:null}};
+
 let currentMode='ocr';
+let currentColor='olive';
 let stream=null,scanning=false,intervalId=null;
 let okCount=0,ngCount=0;
 let workerReady=false,worker=null,audioCtx=null;
 let lastResult=null,alarmActive=false,alarmInterval=null,mirrored=false;
-let regStream=null,regTargetId=null;
+let regStream=null,regTargetId=null,regTargetColor=null;
 let editMode=false,debugVisible=false;
 
 const video=document.getElementById('video');
@@ -263,14 +306,26 @@ function setMode(mode){
   document.querySelectorAll('.mode-btn').forEach((b,i)=>{
     b.classList.toggle('active',(i===0&&mode==='ocr')||(i===1&&mode==='full'));
   });
-  const tabRow=document.getElementById('tab-row');
-  tabRow.style.display=mode==='full'?'flex':'none';
+  document.getElementById('color-row').style.display=mode==='full'?'flex':'none';
+  document.getElementById('tab-row').style.display=mode==='full'?'flex':'none';
   if(mode==='ocr'){
     document.getElementById('inspect-panel').style.display='block';
     document.getElementById('reg-panel').style.display='none';
   } else {
     switchTab('inspect');
   }
+  lastResult=null;
+  renderCheckItems();
+}
+
+// ===== 色選択 =====
+function setColor(color){
+  currentColor=color;
+  try{localStorage.setItem(COLOR_STORAGE_KEY,color);}catch(e){}
+  COLORS.forEach(c=>{
+    const btn=document.getElementById('cbtn-'+c);
+    if(btn)btn.classList.toggle('active',c===color);
+  });
   lastResult=null;
   renderCheckItems();
 }
@@ -282,6 +337,7 @@ function switchTab(tab){
   document.querySelectorAll('.tab-btn').forEach((b,i)=>{
     b.classList.toggle('active',(i===0&&tab==='inspect')||(i===1&&tab==='register'));
   });
+  if(tab==='register'){renderColorRegItems();renderRegItems();}
 }
 
 // ===== デバッグ =====
@@ -373,7 +429,7 @@ function setStatus(type,sub){
   statusSub.textContent=sub||'組付けを確認してください';statusBar.style.border='2px solid #E24B4A';
   resultBadge.className='badge-ng';resultBadge.textContent='✗ NG';}
   else if(type==='scanning'){statusIcon.textContent='🔍';statusTitle.textContent='検査中...';statusTitle.style.color='#111';
-  statusSub.textContent='製品全体をカメラに映してください';
+  statusSub.textContent=currentMode==='full'?`色: ${COLOR_LABELS[currentColor]} | 製品をカメラに映してください`:'製品全体をカメラに映してください';
   resultBadge.className='badge-wait';resultBadge.textContent='検査中...';}
   else{statusIcon.textContent='📷';statusTitle.textContent='カメラを起動してください';statusTitle.style.color='#111';
   statusSub.textContent='「検査開始」ボタンを押してください';resultBadge.style.display='none';}
@@ -465,8 +521,21 @@ async function runInspection(){
     }
   }catch(e){}
 
-  // 画像比較（全機能モードのみ）
+  // 全機能モード：画像比較
   if(currentMode==='full'){
+    // 色別油タンク判定
+    const ct=colorTemplates[currentColor];
+    if(!ct||!ct.template){
+      setCheckItemStatus('r-item-color','noreg');
+      itemResults['color']='noreg';
+    } else {
+      const sim=compareImageData(extractZoneImageData(canvas,ZONE_GM),ct.template);
+      const result=sim>=NG_THRESHOLD?'ng':'ok';
+      setCheckItemStatus('r-item-color',result);
+      itemResults['color']=result;
+      if(result==='ng')hasNG=true;
+    }
+    // 共通部品判定
     for(const item of regItems){
       if(!item.template){
         setCheckItemStatus('r-item-'+item.id,'noreg');
@@ -488,6 +557,7 @@ async function runInspection(){
       lastResult='ng';ngCount++;ngEl.textContent=ngCount;
       const msgs=[];
       if(itemResults['ocr']==='ng')msgs.push('上下逆');
+      if(itemResults['color']==='ng')msgs.push('油タンク色NG');
       for(const item of regItems){if(itemResults[item.id]==='ng')msgs.push(item.name+'欠品');}
       setStatus('ng',msgs.join('・'));startAlarm();
     }
@@ -496,14 +566,13 @@ async function runInspection(){
   }
 }
 
-// ===== 登録項目管理 =====
+// ===== 登録項目管理（共通部品） =====
 function addRegItem(nameOverride){
   const input=document.getElementById('add-item-input');
   const name=nameOverride||(input?input.value.trim():'');
   if(!name){alert('部品名を入力してください');return;}
   const id=nextItemId++;
-  const item={id,name,zone:[...ZONE_GM],template:null,dataURL:null};
-  regItems.push(item);
+  regItems.push({id,name,zone:[...ZONE_GM],template:null,dataURL:null});
   if(input&&!nameOverride)input.value='';
   saveItems();renderRegItems();renderCheckItems();
 }
@@ -515,17 +584,15 @@ function deleteRegItem(id){
   saveItems();renderRegItems();renderCheckItems();lastResult=null;
 }
 function saveItems(){
-  const data=regItems.map(i=>({id:i.id,name:i.name,zone:i.zone}));
-  try{localStorage.setItem(ITEMS_STORAGE_KEY,JSON.stringify(data));}catch(e){}
+  try{localStorage.setItem(ITEMS_STORAGE_KEY,JSON.stringify(regItems.map(i=>({id:i.id,name:i.name,zone:i.zone}))));}catch(e){}
   if(regItems.length>0)nextItemId=Math.max(...regItems.map(i=>i.id))+1;
 }
 function loadItems(){
   try{
     const saved=localStorage.getItem(ITEMS_STORAGE_KEY);
     if(saved){
-      const data=JSON.parse(saved);
       regItems=[];
-      for(const d of data){
+      for(const d of JSON.parse(saved)){
         const item={id:d.id,name:d.name,zone:d.zone||[...ZONE_GM],template:null,dataURL:null};
         const dataURL=localStorage.getItem('gm_ng_item_'+d.id);
         if(dataURL){
@@ -536,27 +603,63 @@ function loadItems(){
             c.getContext('2d').drawImage(img,0,0,COMPARE_W,COMPARE_H);
             item.template=c.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
             renderRegItems();
-          };
-          img.src=dataURL;
+          };img.src=dataURL;
         }
         regItems.push(item);
         if(d.id>=nextItemId)nextItemId=d.id+1;
       }
     } else {
-      // 初回デフォルト4項目
-      ['油量計','ハンドル','灯油キャップ','燃焼筒'].forEach(n=>addRegItem(n));
+      ['ハンドル','灯油キャップ','燃焼筒'].forEach(n=>addRegItem(n));
       return;
     }
   }catch(e){}
 }
 
+// 色別油タンクの保存・読込
+function saveColorTemplate(color){
+  const ct=colorTemplates[color];
+  if(ct.dataURL){try{localStorage.setItem('gm_color_ng_'+color,ct.dataURL);}catch(e){}}
+}
+function loadColorTemplates(){
+  for(const color of COLORS){
+    const dataURL=localStorage.getItem('gm_color_ng_'+color);
+    if(dataURL){
+      colorTemplates[color].dataURL=dataURL;
+      const img=new Image();
+      img.onload=()=>{
+        const c=document.createElement('canvas');c.width=COMPARE_W;c.height=COMPARE_H;
+        c.getContext('2d').drawImage(img,0,0,COMPARE_W,COMPARE_H);
+        colorTemplates[color].template=c.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
+        renderColorRegItems();
+      };img.src=dataURL;
+    }
+  }
+}
+
 // ===== UI描画 =====
+function renderColorRegItems(){
+  const container=document.getElementById('color-reg-items');if(!container)return;
+  container.innerHTML='';
+  for(const color of COLORS){
+    const ct=colorTemplates[color];
+    const hasThumb=!!ct.dataURL;
+    const div=document.createElement('div');div.className='reg-item';
+    div.innerHTML=`
+      ${hasThumb?`<img src="${ct.dataURL}" class="reg-thumb">`:`<div class="reg-thumb-empty">＋</div>`}
+      <div class="reg-info">
+        <div class="reg-name"><span class="color-badge ${COLOR_STYLES[color]}">${COLOR_LABELS[color]}</span> 油タンク欠品NG</div>
+        <div class="reg-desc">油タンクがない状態を撮影</div>
+      </div>
+      <button class="${hasThumb?'reg-btn redo':'reg-btn'}" onclick="openColorRegModal('${color}')">${hasThumb?'再登録':'登録'}</button>`;
+    container.appendChild(div);
+  }
+}
 function renderRegItems(){
   const container=document.getElementById('reg-items-container');if(!container)return;
   container.innerHTML='';
   for(const item of regItems){
-    const div=document.createElement('div');div.className='reg-item';
     const hasThumb=!!item.dataURL;
+    const div=document.createElement('div');div.className='reg-item';
     div.innerHTML=`
       ${hasThumb?`<img src="${item.dataURL}" class="reg-thumb">`:`<div class="reg-thumb-empty">＋</div>`}
       <div class="reg-info">
@@ -576,6 +679,12 @@ function renderCheckItems(){
   if(ocr1)container.appendChild(ocr1);
   if(ocr2&&currentMode==='full')container.appendChild(ocr2);
   if(currentMode==='full'){
+    // 色別油タンク行
+    const colorDiv=document.createElement('div');
+    colorDiv.className='check-item';colorDiv.id='r-item-color';
+    colorDiv.innerHTML=`<span class="check-badge">―</span><span class="check-label">油タンク・${COLOR_LABELS[currentColor]}（画像比較）</span><span class="check-status s-noreg">未登録</span>`;
+    container.appendChild(colorDiv);
+    // 共通部品行
     for(const item of regItems){
       const div=document.createElement('div');div.className='check-item';div.id='r-item-'+item.id;
       div.innerHTML=`<span class="check-badge">―</span><span class="check-label">${item.name}（画像比較）</span><span class="check-status s-noreg">未登録</span>`;
@@ -607,7 +716,7 @@ function saveZonePosition(){
   const el=document.getElementById('zone-gm');
   ZONE_GM=[parseFloat(el.style.top)/ch,parseFloat(el.style.left)/cw,parseFloat(el.style.width)/cw,parseFloat(el.style.height)/ch];
   try{localStorage.setItem(ZONE_STORAGE_KEY,JSON.stringify(ZONE_GM));}catch(e){}
-  const hasReg=regItems.some(i=>i.template!==null);
+  const hasReg=regItems.some(i=>i.template)||COLORS.some(c=>colorTemplates[c].template);
   alert(hasReg?'✅ 枠の位置を保存しました！\n⚠️ 枠を変更したのでNG登録をやり直してください。':'✅ 枠の位置を保存しました！');
 }
 function loadZonePosition(){
@@ -672,38 +781,72 @@ function initZoneDrag(){
   });
 }
 
-// ===== NG登録モーダル =====
+// ===== NG登録モーダル（色別油タンク） =====
+function openColorRegModal(color){
+  regTargetColor=color;regTargetId=null;
+  document.getElementById('reg-camera-modal').style.display='flex';
+  document.getElementById('reg-modal-label').textContent=COLOR_LABELS[color]+' 油タンク欠品NG を登録';
+  document.getElementById('reg-modal-desc').textContent='黄色い枠内に油タンクが映るように合わせて撮影してください';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:960},height:{ideal:1280}}})
+    .then(s=>{regStream=s;const rv=document.getElementById('reg-video');rv.srcObject=s;
+      rv.onloadedmetadata=()=>updateRegZoneHighlight(ZONE_GM);})
+    .catch(()=>{document.getElementById('reg-modal-desc').textContent='カメラのアクセスを許可してください';});
+}
+
+// ===== NG登録モーダル（共通部品） =====
 function openRegModal(itemId){
-  regTargetId=itemId;
+  regTargetId=itemId;regTargetColor=null;
   const item=regItems.find(i=>i.id===itemId);if(!item)return;
   document.getElementById('reg-camera-modal').style.display='flex';
   document.getElementById('reg-modal-label').textContent=item.name+' 欠品NG を登録';
+  document.getElementById('reg-modal-desc').textContent='黄色い枠内に欠品部分が映るように合わせて撮影してください';
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:960},height:{ideal:1280}}})
     .then(s=>{regStream=s;const rv=document.getElementById('reg-video');rv.srcObject=s;
-      rv.onloadedmetadata=()=>{
-        const wrap=document.getElementById('reg-video-wrap');const hl=document.getElementById('reg-zone-highlight');
-        const z=item.zone;const vw=wrap.offsetWidth;
-        hl.style.left=(z[1]*vw)+'px';hl.style.top=(z[0]*vw)+'px';hl.style.width=(z[2]*vw)+'px';hl.style.height=(z[3]*vw)+'px';
-      };})
+      rv.onloadedmetadata=()=>updateRegZoneHighlight(item.zone);})
     .catch(()=>{document.getElementById('reg-modal-desc').textContent='カメラのアクセスを許可してください';});
 }
+
+function updateRegZoneHighlight(zone){
+  const wrap=document.getElementById('reg-video-wrap');const hl=document.getElementById('reg-zone-highlight');
+  const vw=wrap.offsetWidth;
+  hl.style.left=(zone[1]*vw)+'px';hl.style.top=(zone[0]*vw)+'px';hl.style.width=(zone[2]*vw)+'px';hl.style.height=(zone[3]*vw)+'px';
+}
+
 function captureRegImage(){
   const rv=document.getElementById('reg-video');
   const tmpCanvas=document.createElement('canvas');tmpCanvas.width=rv.videoWidth;tmpCanvas.height=rv.videoHeight;
   tmpCanvas.getContext('2d').drawImage(rv,0,0);
-  const item=regItems.find(i=>i.id===regTargetId);if(!item){closeRegModal();return;}
-  const z=item.zone,w=tmpCanvas.width,h=tmpCanvas.height;
-  const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
-  const normCanvas=document.createElement('canvas');normCanvas.width=COMPARE_W;normCanvas.height=COMPARE_H;
-  normCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,COMPARE_W,COMPARE_H);
-  item.template=normCanvas.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
-  const thumbCanvas=document.createElement('canvas');thumbCanvas.width=zw;thumbCanvas.height=zh;
-  thumbCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,zw,zh);
-  const dataURL=thumbCanvas.toDataURL('image/jpeg',0.7);
-  item.dataURL=dataURL;
-  try{localStorage.setItem('gm_ng_item_'+item.id,dataURL);}catch(e){}
-  closeRegModal();renderRegItems();
-  alert('✅ 登録完了！次回から自動で読み込まれます。');
+
+  if(regTargetColor){
+    // 色別油タンク登録
+    const z=ZONE_GM,w=tmpCanvas.width,h=tmpCanvas.height;
+    const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
+    const normCanvas=document.createElement('canvas');normCanvas.width=COMPARE_W;normCanvas.height=COMPARE_H;
+    normCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,COMPARE_W,COMPARE_H);
+    colorTemplates[regTargetColor].template=normCanvas.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
+    const thumbCanvas=document.createElement('canvas');thumbCanvas.width=zw;thumbCanvas.height=zh;
+    thumbCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,zw,zh);
+    const dataURL=thumbCanvas.toDataURL('image/jpeg',0.7);
+    colorTemplates[regTargetColor].dataURL=dataURL;
+    saveColorTemplate(regTargetColor);
+    closeRegModal();renderColorRegItems();
+    alert('✅ '+COLOR_LABELS[regTargetColor]+' 登録完了！');
+  } else if(regTargetId!==null){
+    // 共通部品登録
+    const item=regItems.find(i=>i.id===regTargetId);if(!item){closeRegModal();return;}
+    const z=item.zone,w=tmpCanvas.width,h=tmpCanvas.height;
+    const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
+    const normCanvas=document.createElement('canvas');normCanvas.width=COMPARE_W;normCanvas.height=COMPARE_H;
+    normCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,COMPARE_W,COMPARE_H);
+    item.template=normCanvas.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
+    const thumbCanvas=document.createElement('canvas');thumbCanvas.width=zw;thumbCanvas.height=zh;
+    thumbCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,zw,zh);
+    const dataURL=thumbCanvas.toDataURL('image/jpeg',0.7);
+    item.dataURL=dataURL;
+    try{localStorage.setItem('gm_ng_item_'+item.id,dataURL);}catch(e){}
+    closeRegModal();renderRegItems();
+    alert('✅ 登録完了！次回から自動で読み込まれます。');
+  }
 }
 function closeRegModal(){
   document.getElementById('reg-camera-modal').style.display='none';
@@ -717,9 +860,13 @@ window.addEventListener('load',()=>{
     loadZonePosition();
     initZoneDrag();
     loadItems();
+    loadColorTemplates();
     try{const m=localStorage.getItem(MODE_STORAGE_KEY);if(m)currentMode=m;}catch(e){}
+    try{const c=localStorage.getItem(COLOR_STORAGE_KEY);if(c)currentColor=c;}catch(e){}
     setMode(currentMode);
+    setColor(currentColor);
     renderRegItems();
+    renderColorRegItems();
     renderCheckItems();
   },100);
 });
