@@ -155,19 +155,6 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
     <button class="mode-btn" onclick="setMode('full')">🔍 全機能</button>
   </div>
 
-  <!-- 色選択（全機能モードのみ表示） -->
-  <div id="color-row" style="display:none;">
-    <button class="color-btn active" id="cbtn-olive" onclick="setColor('olive')"><span class="color-dot" style="background:#4a7c59;"></span>オリーブ</button>
-    <button class="color-btn" id="cbtn-black" onclick="setColor('black')"><span class="color-dot" style="background:#333;"></span>ブラック</button>
-    <button class="color-btn" id="cbtn-coyote" onclick="setColor('coyote')"><span class="color-dot" style="background:#b5904a;"></span>コヨーテ</button>
-  </div>
-
-  <!-- タブ（全機能モードのみ表示） -->
-  <div id="tab-row" style="display:none;">
-    <button class="tab-btn active" onclick="switchTab('inspect')">🔍 検査</button>
-    <button class="tab-btn" onclick="switchTab('register')">📷 NG登録</button>
-  </div>
-
   <!-- 検査パネル -->
   <div id="inspect-panel">
     <button id="btn-edit-zone" onclick="toggleEditMode()">✏️ 枠の位置・サイズを調整する</button>
@@ -209,6 +196,17 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
     <div id="counter-row">
       <div class="count-card"><div class="count-label">OK 件数</div><div class="count-val ok-val" id="ok-count">0</div></div>
       <div class="count-card"><div class="count-label">NG 件数</div><div class="count-val ng-val" id="ng-count">0</div></div>
+    </div>
+
+    <!-- 色選択・タブ（全機能モードのみ・カウンター下） -->
+    <div id="color-row" style="display:none; margin-top:6px;">
+      <button class="color-btn active" id="cbtn-olive" onclick="setColor('olive')"><span class="color-dot" style="background:#4a7c59;"></span>オリーブ</button>
+      <button class="color-btn" id="cbtn-black" onclick="setColor('black')"><span class="color-dot" style="background:#333;"></span>ブラック</button>
+      <button class="color-btn" id="cbtn-coyote" onclick="setColor('coyote')"><span class="color-dot" style="background:#b5904a;"></span>コヨーテ</button>
+    </div>
+    <div id="tab-row" style="display:none; margin-top:6px;">
+      <button class="tab-btn active" onclick="switchTab('inspect')">🔍 検査</button>
+      <button class="tab-btn" onclick="switchTab('register')">📷 NG登録</button>
     </div>
 
     <div id="debug-panel">
@@ -308,11 +306,12 @@ function setMode(mode){
   });
   document.getElementById('color-row').style.display=mode==='full'?'flex':'none';
   document.getElementById('tab-row').style.display=mode==='full'?'flex':'none';
-  if(mode==='ocr'){
-    document.getElementById('inspect-panel').style.display='block';
-    document.getElementById('reg-panel').style.display='none';
-  } else {
-    switchTab('inspect');
+  // 常に検査パネルを表示、NG登録パネルは非表示に戻す
+  document.getElementById('inspect-panel').style.display='block';
+  document.getElementById('reg-panel').style.display='none';
+  if(mode==='full'){
+    // タブのactive状態を検査側に戻す
+    document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
   }
   lastResult=null;
   renderCheckItems();
@@ -332,7 +331,8 @@ function setColor(color){
 
 // ===== タブ =====
 function switchTab(tab){
-  document.getElementById('inspect-panel').style.display=tab==='inspect'?'block':'none';
+  // inspect-panelは常に表示
+  // NG登録パネルだけ切替
   document.getElementById('reg-panel').style.display=tab==='register'?'block':'none';
   document.querySelectorAll('.tab-btn').forEach((b,i)=>{
     b.classList.toggle('active',(i===0&&tab==='inspect')||(i===1&&tab==='register'));
