@@ -602,14 +602,16 @@ async function runInspection(){
         document.getElementById('dbg-hsv-v').textContent=currentHsv.vAvg.toFixed(3);
       }
     }
-    // 共通部品判定
+    // 共通部品判定（HSV色判定）
     for(const item of regItems){
-      if(!item.template){
+      if(!item.hsvProfile){
         setCheckItemStatus('r-item-'+item.id,'noreg');
         itemResults[item.id]='noreg';
       } else {
-        const sim=compareImageData(extractZoneImageData(canvas,item.zone),item.template);
-        const result=sim>=NG_THRESHOLD?'ng':'ok';
+        const currentImgData=extractZoneImageData(canvas,item.zone);
+        const currentHsv=getHsvProfile(currentImgData);
+        const hsvSim=compareHsvProfiles(currentHsv,item.hsvProfile);
+        const result=hsvSim<0.55?'ng':'ok';
         setCheckItemStatus('r-item-'+item.id,result);
         itemResults[item.id]=result;
         if(result==='ng')hasNG=true;
@@ -639,7 +641,7 @@ function addRegItem(nameOverride){
   const name=nameOverride||(input?input.value.trim():'');
   if(!name){alert('部品名を入力してください');return;}
   const id=nextItemId++;
-  regItems.push({id,name,zone:[...ZONE_GM],template:null,dataURL:null});
+  regItems.push({id,name,zone:[...ZONE_GM],template:null,dataURL:null,hsvProfile:null});
   if(input&&!nameOverride)input.value='';
   saveItems();renderRegItems();renderCheckItems();
 }
@@ -660,7 +662,7 @@ function loadItems(){
     if(saved){
       regItems=[];
       for(const d of JSON.parse(saved)){
-        const item={id:d.id,name:d.name,zone:d.zone||[...ZONE_GM],template:null,dataURL:null};
+        const item={id:d.id,name:d.name,zone:d.zone||[...ZONE_GM],template:null,dataURL:null,hsvProfile:null};
         const dataURL=localStorage.getItem('gm_v2_ng_item_'+d.id);
         if(dataURL){
           item.dataURL=dataURL;
@@ -668,7 +670,9 @@ function loadItems(){
           img.onload=()=>{
             const c=document.createElement('canvas');c.width=COMPARE_W;c.height=COMPARE_H;
             c.getContext('2d').drawImage(img,0,0,COMPARE_W,COMPARE_H);
-            item.template=c.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
+            const imgData=c.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
+            item.template=imgData;
+            item.hsvProfile=getHsvProfile(imgData);
             renderRegItems();
           };img.src=dataURL;
         }
@@ -909,7 +913,9 @@ function captureRegImage(){
     const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
     const normCanvas=document.createElement('canvas');normCanvas.width=COMPARE_W;normCanvas.height=COMPARE_H;
     normCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,COMPARE_W,COMPARE_H);
-    item.template=normCanvas.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
+    const imgData=normCanvas.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
+    item.template=imgData;
+    item.hsvProfile=getHsvProfile(imgData);
     const thumbCanvas=document.createElement('canvas');thumbCanvas.width=zw;thumbCanvas.height=zh;
     thumbCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,zw,zh);
     const dataURL=thumbCanvas.toDataURL('image/jpeg',0.7);
