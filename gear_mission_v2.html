@@ -813,7 +813,8 @@ function openRegModal(itemId){
   document.getElementById('reg-modal-desc').textContent='黄色い枠内に欠品部分が映るように合わせて撮影してください';
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:960},height:{ideal:1280}}})
     .then(s=>{regStream=s;const rv=document.getElementById('reg-video');rv.srcObject=s;
-      rv.onloadedmetadata=()=>updateRegZoneHighlight(item.zone);})
+      // 常に最新のZONE_GM（枠調整後の値）を使う
+      rv.onloadedmetadata=()=>updateRegZoneHighlight(ZONE_GM);})
     .catch(()=>{document.getElementById('reg-modal-desc').textContent='カメラのアクセスを許可してください';});
 }
 
@@ -828,7 +829,8 @@ function captureRegImage(){
   const tmpCanvas=document.createElement('canvas');tmpCanvas.width=rv.videoWidth;tmpCanvas.height=rv.videoHeight;
   tmpCanvas.getContext('2d').drawImage(rv,0,0);
   const item=regItems.find(i=>i.id===regTargetId);if(!item){closeRegModal();return;}
-  const z=item.zone,w=tmpCanvas.width,h=tmpCanvas.height;
+  // 撮影時も最新のZONE_GM（枠調整後の値）を使って切り出す
+  const z=ZONE_GM,w=tmpCanvas.width,h=tmpCanvas.height;
   const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
   const normCanvas=document.createElement('canvas');normCanvas.width=COMPARE_W;normCanvas.height=COMPARE_H;
   normCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,COMPARE_W,COMPARE_H);
