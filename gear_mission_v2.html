@@ -10,21 +10,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-ser
 #app { width: 100%; max-width: 440px; padding-bottom: 10px; }
 h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; color: #111; }
 
-/* モード切替 */
 #mode-row { display: flex; margin-bottom: 6px; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }
 .mode-btn { flex: 1; padding: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: #f0f0f0; color: #888; }
 .mode-btn.active { background: #2563EB; color: white; }
-
-/* 色選択 */
-#color-row { display: flex; gap: 6px; margin-bottom: 6px; }
-.color-btn { flex: 1; padding: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: 2px solid #ddd; border-radius: 10px; background: #f8f8f8; color: #555; text-align: center; }
-.color-btn.active { border-color: #2563EB; background: #eff6ff; color: #2563EB; }
-.color-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
-
-/* タブ */
-#tab-row { display: flex; margin-bottom: 6px; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }
-.tab-btn { flex: 1; padding: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: #f0f0f0; color: #888; }
-.tab-btn.active { background: #1D9E75; color: white; }
 
 #video-container {
   position: relative; width: 100%; height: 0; padding-top: 100%;
@@ -101,7 +89,15 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 .count-val { font-size: 22px; font-weight: 700; margin-top: 1px; }
 .ok-val { color: #1D9E75; } .ng-val { color: #E24B4A; }
 
-/* 登録タブ */
+#color-row { display: flex; gap: 6px; }
+.color-btn { flex: 1; padding: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: 2px solid #ddd; border-radius: 10px; background: #f8f8f8; color: #555; text-align: center; }
+.color-btn.active { border-color: #2563EB; background: #eff6ff; color: #2563EB; }
+.color-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+
+#tab-row { display: flex; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }
+.tab-btn { flex: 1; padding: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: #f0f0f0; color: #888; }
+.tab-btn.active { background: #1D9E75; color: white; }
+
 #reg-panel { display: none; }
 .reg-section { margin-top: 8px; background: white; border-radius: 12px; border: 1px solid #ddd; overflow: hidden; }
 .reg-section-title { padding: 9px 12px; font-size: 12px; font-weight: 700; background: #f8f8f8; border-bottom: 1px solid #eee; color: #333; }
@@ -116,16 +112,11 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 .reg-btn.redo { background: #eee; color: #333; }
 .reg-del-btn { padding: 6px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; border: none; background: #fee2e2; color: #E24B4A; flex-shrink: 0; }
 .save-badge { display: inline-block; margin-left: 6px; font-size: 10px; background: #1D9E75; color: white; padding: 2px 6px; border-radius: 10px; font-weight: 600; }
-.color-badge { display: inline-block; margin-left: 4px; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 600; }
-.color-badge-olive { background: #4a7c59; color: white; }
-.color-badge-black { background: #333; color: white; }
-.color-badge-coyote { background: #b5904a; color: white; }
 
 #add-item-form { padding: 10px 12px; background: #f8f8f8; border-top: 1px solid #eee; display: flex; gap: 6px; align-items: center; }
 #add-item-input { flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 12px; background: white; }
 #add-item-btn { padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: #1D9E75; color: white; white-space: nowrap; }
 
-/* 登録モーダル */
 #reg-camera-modal {
   display: none; position: fixed; top:0; left:0; right:0; bottom:0;
   background: rgba(0,0,0,0.9); z-index: 100;
@@ -149,13 +140,11 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 <div id="app">
   <h1>GEAR MISSION 組付け検査 <span style="font-size:10px;background:#2563EB;color:white;padding:2px 6px;border-radius:6px;margin-left:4px;">v2 HSV</span></h1>
 
-  <!-- モード切替 -->
   <div id="mode-row">
     <button class="mode-btn active" onclick="setMode('ocr')">🔤 OCRのみ</button>
     <button class="mode-btn" onclick="setMode('full')">🔍 全機能</button>
   </div>
 
-  <!-- 検査パネル -->
   <div id="inspect-panel">
     <button id="btn-edit-zone" onclick="toggleEditMode()">✏️ 枠の位置・サイズを調整する</button>
     <div id="edit-hint">📌 枠をドラッグ→移動　角の白い四角をドラッグ→サイズ変更<br>調整完了後「調整完了」を押すと保存されます。</div>
@@ -165,6 +154,7 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
       <canvas id="canvas"></canvas>
       <div id="zone-overlay">
         <div class="zone-box" id="zone-gm"><span class="zone-label">GEAR MISSION</span><div class="zone-resize-handle"></div></div>
+        <!-- 部品ごとの枠は動的生成 -->
       </div>
       <div id="result-badge" class="badge-wait">カメラを起動してください</div>
     </div>
@@ -198,7 +188,6 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
       <div class="count-card"><div class="count-label">NG 件数</div><div class="count-val ng-val" id="ng-count">0</div></div>
     </div>
 
-    <!-- 色選択・タブ（全機能モードのみ・カウンター下） -->
     <div id="color-row" style="display:none; margin-top:6px;">
       <button class="color-btn active" id="cbtn-olive" onclick="setColor('olive')"><span class="color-dot" style="background:#4a7c59;"></span>オリーブ</button>
       <button class="color-btn" id="cbtn-black" onclick="setColor('black')"><span class="color-dot" style="background:#333;"></span>ブラック</button>
@@ -217,15 +206,11 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
       回転テキスト: <span id="dbg-text-f">-</span><br>
       <strong>🎨 HSVデバッグ</strong><br>
       色類似度: <span id="dbg-hsv-sim">-</span>（0.55以上でOK）<br>
-      彩度(S): <span id="dbg-hsv-s">-</span><br>
-      明度(V): <span id="dbg-hsv-v">-</span>
     </div>
     <button onclick="toggleDebug()" style="width:100%;margin-top:6px;padding:6px;border-radius:8px;border:1px solid #ccc;background:#fff;font-size:11px;color:#888;cursor:pointer;">🔬 デバッグ表示 ON/OFF</button>
   </div>
 
-  <!-- NG登録タブ -->
   <div id="reg-panel" style="display:none;">
-    <!-- 共通部品登録 -->
     <div class="reg-section">
       <div class="reg-section-title">🔧 共通部品 NG登録 <span class="save-badge">💾 自動保存</span></div>
       <div id="reg-items-container"></div>
@@ -234,18 +219,16 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
         <button id="add-item-btn" onclick="addRegItem()">＋ 追加</button>
       </div>
     </div>
-
     <div style="margin-top:8px; padding:10px 12px; background:#fffbe6; border-radius:10px; border:1px solid #ffe58f; font-size:11px; color:#7d6608; line-height:1.7;">
       ⚠️ <strong>正しい運用手順</strong><br>
       ① 検査タブで枠の位置・サイズを調整して「調整完了」<br>
-      ② NG登録タブで共通部品を登録<br>
+      ② NG登録タブで各部品を登録<br>
       ③ 検査タブで色を選択して検査開始<br>
       ※枠を調整したら必ずNG登録をやり直してください
     </div>
   </div>
 </div>
 
-<!-- NG登録モーダル -->
 <div id="reg-camera-modal">
   <div id="reg-modal-label">欠品NG画像を登録</div>
   <div id="reg-modal-desc">黄色い枠内に欠品部分が映るように合わせて撮影してください</div>
@@ -260,28 +243,33 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 const COMPARE_W=64, COMPARE_H=64, NG_THRESHOLD=0.72;
-const ZONE_STORAGE_KEY='gm_v2_zone';
+const ZONE_GM_KEY='gm_v2_zone_gm';
 const ITEMS_STORAGE_KEY='gm_v2_reg_items';
 const MODE_STORAGE_KEY='gm_v2_mode';
 const COLOR_STORAGE_KEY='gm_v2_color';
 const COLORS=['olive','black','coyote'];
 const COLOR_LABELS={olive:'オリーブ',black:'ブラック',coyote:'コヨーテ'};
-const COLOR_STYLES={olive:'color-badge-olive',black:'color-badge-black',coyote:'color-badge-coyote'};
 
+// ゾーン定義
 let ZONE_GM=[0.18,0.05,0.88,0.22];
-// 共通部品リスト [{id, name, zone, template, dataURL}]
+// デフォルト部品ゾーン（追加時の初期位置）
+const DEFAULT_ITEM_ZONES={
+  '油量計':[0.55,0.18,0.24,0.24],
+  'ハンドル':[0.50,0.35,0.30,0.33],
+  '灯油キャップ':[0.55,0.58,0.24,0.24],
+  '燃焼筒':[0.30,0.20,0.58,0.28],
+};
+const ITEM_ZONE_COLORS=['rgba(100,200,255,0.8)','rgba(200,255,100,0.8)','rgba(255,150,100,0.8)','rgba(255,100,255,0.8)','rgba(200,150,255,0.8)'];
+
 let regItems=[];
 let nextItemId=1;
-// 色別油タンクNG [{color, template, dataURL}]
-let colorTemplates={olive:{template:null,dataURL:null,hsvProfile:null},black:{template:null,dataURL:null,hsvProfile:null},coyote:{template:null,dataURL:null,hsvProfile:null}};
-
 let currentMode='ocr';
 let currentColor='olive';
 let stream=null,scanning=false,intervalId=null;
 let okCount=0,ngCount=0;
 let workerReady=false,worker=null,audioCtx=null;
 let lastResult=null,alarmActive=false,alarmInterval=null,mirrored=false;
-let regStream=null,regTargetId=null,regTargetColor=null;
+let regStream=null,regTargetId=null;
 let editMode=false,debugVisible=false;
 
 const video=document.getElementById('video');
@@ -304,13 +292,14 @@ function setMode(mode){
   });
   document.getElementById('color-row').style.display=mode==='full'?'flex':'none';
   document.getElementById('tab-row').style.display=mode==='full'?'flex':'none';
-  // 常に検査パネルを表示、NG登録パネルは非表示に戻す
   document.getElementById('inspect-panel').style.display='block';
   document.getElementById('reg-panel').style.display='none';
-  if(mode==='full'){
-    // タブのactive状態を検査側に戻す
-    document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
-  }
+  if(mode==='full'){document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));}
+  // 部品枠の表示/非表示
+  regItems.forEach(item=>{
+    const el=document.getElementById('zone-item-'+item.id);
+    if(el)el.style.display=mode==='full'?'flex':'none';
+  });
   lastResult=null;
   renderCheckItems();
 }
@@ -319,23 +308,18 @@ function setMode(mode){
 function setColor(color){
   currentColor=color;
   try{localStorage.setItem(COLOR_STORAGE_KEY,color);}catch(e){}
-  COLORS.forEach(c=>{
-    const btn=document.getElementById('cbtn-'+c);
-    if(btn)btn.classList.toggle('active',c===color);
-  });
+  COLORS.forEach(c=>{const btn=document.getElementById('cbtn-'+c);if(btn)btn.classList.toggle('active',c===color);});
   lastResult=null;
   renderCheckItems();
 }
 
 // ===== タブ =====
 function switchTab(tab){
-  // inspect-panelは常に表示
-  // NG登録パネルだけ切替
   document.getElementById('reg-panel').style.display=tab==='register'?'block':'none';
   document.querySelectorAll('.tab-btn').forEach((b,i)=>{
     b.classList.toggle('active',(i===0&&tab==='inspect')||(i===1&&tab==='register'));
   });
-  if(tab==='register'){renderRegItems();}
+  if(tab==='register')renderRegItems();
 }
 
 // ===== デバッグ =====
@@ -447,7 +431,7 @@ async function initWorker(){
   catch(e){statusSub.textContent='OCRエンジンの初期化に失敗しました';}
 }
 
-// ===== HSV変換・色判定 =====
+// ===== HSV =====
 function rgbToHsv(r,g,b){
   r/=255;g/=255;b/=255;
   const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;
@@ -460,79 +444,33 @@ function rgbToHsv(r,g,b){
   }
   return{h,s,v};
 }
-
-// ImageDataからHSVヒストグラムを生成
 function getHsvProfile(imageData){
   const data=imageData.data;
   let hSum=0,sSum=0,vSum=0,count=0;
-  const hBins=new Array(36).fill(0); // 10度刻み
+  const hBins=new Array(36).fill(0);
   for(let i=0;i<data.length;i+=4){
     const {h,s,v}=rgbToHsv(data[i],data[i+1],data[i+2]);
     hSum+=h;sSum+=s;vSum+=v;count++;
-    if(s>0.15&&v>0.15){ // 無彩色除外
-      hBins[Math.floor(h/10)%36]++;
-    }
+    if(s>0.15&&v>0.15)hBins[Math.floor(h/10)%36]++;
   }
-  return{
-    hAvg:hSum/count,
-    sAvg:sSum/count,
-    vAvg:vSum/count,
-    hBins,
-    count
-  };
+  return{hAvg:hSum/count,sAvg:sSum/count,vAvg:vSum/count,hBins,count};
 }
-
-// HSVプロファイルの類似度を計算
 function compareHsvProfiles(p1,p2){
-  // 平均S・Vの差分（照明変化に強い）
   const sDiff=Math.abs(p1.sAvg-p2.sAvg);
   const vDiff=Math.abs(p1.vAvg-p2.vAvg);
-
-  // 色相ヒストグラムのコサイン類似度
   let dot=0,norm1=0,norm2=0;
-  for(let i=0;i<36;i++){
-    dot+=p1.hBins[i]*p2.hBins[i];
-    norm1+=p1.hBins[i]*p1.hBins[i];
-    norm2+=p2.hBins[i]*p2.hBins[i];
-  }
+  for(let i=0;i<36;i++){dot+=p1.hBins[i]*p2.hBins[i];norm1+=p1.hBins[i]*p1.hBins[i];norm2+=p2.hBins[i]*p2.hBins[i];}
   const cosSim=(norm1===0||norm2===0)?0:dot/(Math.sqrt(norm1)*Math.sqrt(norm2));
-
-  // 総合スコア（色相類似度7割・彩度差2割・明度差1割）
-  const score=cosSim*0.7 + Math.max(0,1-sDiff*3)*0.2 + Math.max(0,1-vDiff*2)*0.1;
-  return score;
+  return cosSim*0.7+Math.max(0,1-sDiff*3)*0.2+Math.max(0,1-vDiff*2)*0.1;
 }
 
 // ===== 画像処理 =====
-function extractAndPreprocess(srcCanvas){
-  const z=ZONE_GM,w=srcCanvas.width,h=srcCanvas.height;
-  const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
-  const zoneCanvas=document.createElement('canvas');
-  zoneCanvas.width=zw*2;zoneCanvas.height=zh*2;
-  const zc=zoneCanvas.getContext('2d');
-  zc.drawImage(srcCanvas,zx,zy,zw,zh,0,0,zw*2,zh*2);
-  const id=zc.getImageData(0,0,zoneCanvas.width,zoneCanvas.height);
-  for(let i=0;i<id.data.length;i+=4){
-    const g=0.299*id.data[i]+0.587*id.data[i+1]+0.114*id.data[i+2];
-    id.data[i]=id.data[i+1]=id.data[i+2]=(g<128?0:255);
-  }
-  zc.putImageData(id,0,0);return zoneCanvas;
-}
-function rotate180(srcCanvas){
-  const c=document.createElement('canvas');c.width=srcCanvas.width;c.height=srcCanvas.height;
-  const rc=c.getContext('2d');rc.translate(c.width/2,c.height/2);rc.rotate(Math.PI);
-  rc.drawImage(srcCanvas,-c.width/2,-c.height/2);return c;
-}
 function extractZoneImageData(srcCanvas,zone){
   const w=srcCanvas.width,h=srcCanvas.height;
   const zx=Math.round(zone[1]*w),zy=Math.round(zone[0]*h),zw=Math.round(zone[2]*w),zh=Math.round(zone[3]*h);
   const tmp=document.createElement('canvas');tmp.width=COMPARE_W;tmp.height=COMPARE_H;
   tmp.getContext('2d').drawImage(srcCanvas,zx,zy,zw,zh,0,0,COMPARE_W,COMPARE_H);
   return tmp.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
-}
-function compareImageData(id1,id2){
-  let diff=0;const len=id1.data.length;
-  for(let i=0;i<len;i+=4){diff+=Math.abs(id1.data[i]-id2.data[i])+Math.abs(id1.data[i+1]-id2.data[i+1])+Math.abs(id1.data[i+2]-id2.data[i+2]);}
-  return 1-(diff/(COMPARE_W*COMPARE_H*3*255));
 }
 
 // ===== 検査処理 =====
@@ -541,56 +479,46 @@ async function runInspection(){
   canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx.drawImage(video,0,0);
   let hasNG=false;const itemResults={};
 
-  // OCR判定
+  // OCR判定（ZONE_GMを使用）
   try{
-    const zoneCanvas=extractAndPreprocess(canvas);
-    const rotCanvas=rotate180(zoneCanvas);
-    const [rNormal,rFlipped]=await Promise.all([
-      worker.recognize(zoneCanvas.toDataURL()),
-      worker.recognize(rotCanvas.toDataURL())
-    ]);
+    const w=canvas.width,h=canvas.height,z=ZONE_GM;
+    const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
+    const zoneCanvas=document.createElement('canvas');zoneCanvas.width=zw*2;zoneCanvas.height=zh*2;
+    const zc=zoneCanvas.getContext('2d');zc.drawImage(canvas,zx,zy,zw,zh,0,0,zw*2,zh*2);
+    const id=zc.getImageData(0,0,zoneCanvas.width,zoneCanvas.height);
+    for(let i=0;i<id.data.length;i+=4){const g=0.299*id.data[i]+0.587*id.data[i+1]+0.114*id.data[i+2];id.data[i]=id.data[i+1]=id.data[i+2]=(g<128?0:255);}
+    zc.putImageData(id,0,0);
+    const rotCanvas=document.createElement('canvas');rotCanvas.width=zoneCanvas.width;rotCanvas.height=zoneCanvas.height;
+    const rc=rotCanvas.getContext('2d');rc.translate(rotCanvas.width/2,rotCanvas.height/2);rc.rotate(Math.PI);rc.drawImage(zoneCanvas,-rotCanvas.width/2,-rotCanvas.height/2);
+    const [rNormal,rFlipped]=await Promise.all([worker.recognize(zoneCanvas.toDataURL()),worker.recognize(rotCanvas.toDataURL())]);
     const tN=rNormal.data.text.toUpperCase().replace(/\s+/g,'');
     const tF=rFlipped.data.text.toUpperCase().replace(/\s+/g,'');
     const keywords=['GEAR','MISSION','GEA','EAR','MIS','ION','MISS'];
     const scoreN=keywords.filter(k=>tN.includes(k)).length;
     const scoreF=keywords.filter(k=>tF.includes(k)).length;
-    if(debugVisible){
-      document.getElementById('dbg-normal').textContent=scoreN;
-      document.getElementById('dbg-flipped').textContent=scoreF;
-      document.getElementById('dbg-text-n').textContent=tN.slice(0,30);
-      document.getElementById('dbg-text-f').textContent=tF.slice(0,30);
-    }
-    if(scoreN===0&&scoreF===0){
-      setCheckItemStatus('r-item-ocr1',null);
-      if(currentMode==='full')setCheckItemStatus('r-item-ocr2',null);
-    } else if(scoreF>scoreN){
-      setCheckItemStatus('r-item-ocr1','ng');
-      if(currentMode==='full')setCheckItemStatus('r-item-ocr2','ok');
-      hasNG=true;itemResults['ocr']='ng';
-    } else {
-      setCheckItemStatus('r-item-ocr1','ok');
-      if(currentMode==='full')setCheckItemStatus('r-item-ocr2','ok');
-      itemResults['ocr']='ok';
-    }
+    if(debugVisible){document.getElementById('dbg-normal').textContent=scoreN;document.getElementById('dbg-flipped').textContent=scoreF;document.getElementById('dbg-text-n').textContent=tN.slice(0,30);document.getElementById('dbg-text-f').textContent=tF.slice(0,30);}
+    if(scoreN===0&&scoreF===0){setCheckItemStatus('r-item-ocr1',null);if(currentMode==='full')setCheckItemStatus('r-item-ocr2',null);}
+    else if(scoreF>scoreN){setCheckItemStatus('r-item-ocr1','ng');if(currentMode==='full')setCheckItemStatus('r-item-ocr2','ok');hasNG=true;itemResults['ocr']='ng';}
+    else{setCheckItemStatus('r-item-ocr1','ok');if(currentMode==='full')setCheckItemStatus('r-item-ocr2','ok');itemResults['ocr']='ok';}
   }catch(e){}
 
-  // 全機能モード：画像比較
+  // 全機能モード：各部品のHSV判定（部品ごとの個別枠を使用）
   if(currentMode==='full'){
-    // 共通部品判定（HSV色判定）
+    let hsvSimLast=0;
     for(const item of regItems){
       if(!item.hsvProfile){
-        setCheckItemStatus('r-item-'+item.id,'noreg');
-        itemResults[item.id]='noreg';
+        setCheckItemStatus('r-item-'+item.id,'noreg');itemResults[item.id]='noreg';
       } else {
         const currentImgData=extractZoneImageData(canvas,item.zone);
         const currentHsv=getHsvProfile(currentImgData);
         const hsvSim=compareHsvProfiles(currentHsv,item.hsvProfile);
+        hsvSimLast=hsvSim;
         const result=hsvSim<0.55?'ng':'ok';
-        setCheckItemStatus('r-item-'+item.id,result);
-        itemResults[item.id]=result;
+        setCheckItemStatus('r-item-'+item.id,result);itemResults[item.id]=result;
         if(result==='ng')hasNG=true;
       }
     }
+    if(debugVisible&&regItems.length>0)document.getElementById('dbg-hsv-sim').textContent=hsvSimLast.toFixed(3);
   }
 
   const valid=Object.values(itemResults).filter(v=>v!==null&&v!=='noreg');
@@ -608,21 +536,54 @@ async function runInspection(){
   }
 }
 
-// ===== 登録項目管理（共通部品） =====
+// ===== 部品枠のオーバーレイ管理 =====
+function addZoneBox(item){
+  const overlay=document.getElementById('zone-overlay');
+  const el=document.createElement('div');
+  el.className='zone-box';
+  el.id='zone-item-'+item.id;
+  const colorIdx=(item.id-1)%ITEM_ZONE_COLORS.length;
+  el.style.borderColor=ITEM_ZONE_COLORS[colorIdx];
+  el.style.display=currentMode==='full'?'flex':'none';
+  el.innerHTML=`<span class="zone-label">${item.name}</span><div class="zone-resize-handle"></div>`;
+  overlay.appendChild(el);
+  applyZoneBoxStyle(item);
+  initZoneBoxDrag(el,item);
+}
+function applyZoneBoxStyle(item){
+  const container=document.getElementById('video-container');
+  const cw=container.offsetWidth||1,ch=container.offsetHeight||1;
+  const el=document.getElementById('zone-item-'+item.id);if(!el)return;
+  const z=item.zone;
+  el.style.top=(z[0]*ch)+'px';el.style.left=(z[1]*cw)+'px';
+  el.style.width=(z[2]*cw)+'px';el.style.height=(z[3]*ch)+'px';
+}
+function removeZoneBox(id){
+  const el=document.getElementById('zone-item-'+id);if(el)el.remove();
+}
+
+// ===== 登録項目管理 =====
 function addRegItem(nameOverride){
   const input=document.getElementById('add-item-input');
   const name=nameOverride||(input?input.value.trim():'');
   if(!name){alert('部品名を入力してください');return;}
   const id=nextItemId++;
-  regItems.push({id,name,zone:[...ZONE_GM],template:null,dataURL:null,hsvProfile:null});
+  // デフォルト枠：部品名に対応する位置があれば使う、なければGEAR MISSION枠を流用
+  const defaultZone=DEFAULT_ITEM_ZONES[name]||[...ZONE_GM];
+  const item={id,name,zone:[...defaultZone],template:null,dataURL:null,hsvProfile:null};
+  regItems.push(item);
   if(input&&!nameOverride)input.value='';
-  saveItems();renderRegItems();renderCheckItems();
+  saveItems();
+  addZoneBox(item);
+  renderRegItems();
+  renderCheckItems();
 }
 function deleteRegItem(id){
   const item=regItems.find(i=>i.id===id);
   if(!confirm('「'+(item?item.name:'')+'」を削除しますか？'))return;
   regItems=regItems.filter(i=>i.id!==id);
   try{localStorage.removeItem('gm_v2_ng_item_'+id);}catch(e){}
+  removeZoneBox(id);
   saveItems();renderRegItems();renderCheckItems();lastResult=null;
 }
 function saveItems(){
@@ -644,8 +605,7 @@ function loadItems(){
             const c=document.createElement('canvas');c.width=COMPARE_W;c.height=COMPARE_H;
             c.getContext('2d').drawImage(img,0,0,COMPARE_W,COMPARE_H);
             const imgData=c.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
-            item.template=imgData;
-            item.hsvProfile=getHsvProfile(imgData);
+            item.template=imgData;item.hsvProfile=getHsvProfile(imgData);
             renderRegItems();
           };img.src=dataURL;
         }
@@ -653,33 +613,10 @@ function loadItems(){
         if(d.id>=nextItemId)nextItemId=d.id+1;
       }
     } else {
-      ['ハンドル','灯油キャップ','燃焼筒'].forEach(n=>addRegItem(n));
+      ['油量計','ハンドル','灯油キャップ','燃焼筒'].forEach(n=>addRegItem(n));
       return;
     }
   }catch(e){}
-}
-
-// 色別油タンクの保存・読込
-function saveColorTemplate(color){
-  const ct=colorTemplates[color];
-  if(ct.dataURL){try{localStorage.setItem('gm_v2_color_ng_'+color,ct.dataURL);}catch(e){}}
-}
-function loadColorTemplates(){
-  for(const color of COLORS){
-    const dataURL=localStorage.getItem('gm_v2_color_ng_'+color);
-    if(dataURL){
-      colorTemplates[color].dataURL=dataURL;
-      const img=new Image();
-      img.onload=()=>{
-        const c=document.createElement('canvas');c.width=COMPARE_W;c.height=COMPARE_H;
-        c.getContext('2d').drawImage(img,0,0,COMPARE_W,COMPARE_H);
-        const imgData=c.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
-        colorTemplates[color].template=imgData;
-        colorTemplates[color].hsvProfile=getHsvProfile(imgData);
-        renderColorRegItems();
-      };img.src=dataURL;
-    }
-  }
 }
 
 // ===== UI描画 =====
@@ -710,7 +647,7 @@ function renderCheckItems(){
   if(currentMode==='full'){
     for(const item of regItems){
       const div=document.createElement('div');div.className='check-item';div.id='r-item-'+item.id;
-      div.innerHTML=`<span class="check-badge">―</span><span class="check-label">${item.name}（画像比較）</span><span class="check-status s-noreg">未登録</span>`;
+      div.innerHTML=`<span class="check-badge">―</span><span class="check-label">${item.name}（HSV比較）</span><span class="check-status s-noreg">未登録</span>`;
       container.appendChild(div);
     }
   }
@@ -730,77 +667,88 @@ function toggleEditMode(){
     btn.textContent='✏️ 枠の位置・サイズを調整する';btn.classList.remove('active');
     hint.style.display='none';overlay.style.pointerEvents='none';
     document.querySelectorAll('.zone-box').forEach(z=>z.classList.remove('edit-mode'));
-    saveZonePosition();
+    saveZonePositions();
   }
 }
-function saveZonePosition(){
+function saveZonePositions(){
   const container=document.getElementById('video-container');
   const cw=container.offsetWidth,ch=container.offsetHeight;
-  const el=document.getElementById('zone-gm');
-  ZONE_GM=[parseFloat(el.style.top)/ch,parseFloat(el.style.left)/cw,parseFloat(el.style.width)/cw,parseFloat(el.style.height)/ch];
-  try{localStorage.setItem(ZONE_STORAGE_KEY,JSON.stringify(ZONE_GM));}catch(e){}
+  // GEAR MISSION枠を保存
+  const gmEl=document.getElementById('zone-gm');
+  ZONE_GM=[parseFloat(gmEl.style.top)/ch,parseFloat(gmEl.style.left)/cw,parseFloat(gmEl.style.width)/cw,parseFloat(gmEl.style.height)/ch];
+  try{localStorage.setItem(ZONE_GM_KEY,JSON.stringify(ZONE_GM));}catch(e){}
+  // 各部品枠を保存
+  for(const item of regItems){
+    const el=document.getElementById('zone-item-'+item.id);if(!el)continue;
+    item.zone=[parseFloat(el.style.top)/ch,parseFloat(el.style.left)/cw,parseFloat(el.style.width)/cw,parseFloat(el.style.height)/ch];
+  }
+  saveItems();
   const hasReg=regItems.some(i=>i.template);
   alert(hasReg?'✅ 枠の位置を保存しました！\n⚠️ 枠を変更したのでNG登録をやり直してください。':'✅ 枠の位置を保存しました！');
 }
-function loadZonePosition(){
+function loadZonePositions(){
   const container=document.getElementById('video-container');
   const cw=container.offsetWidth||1,ch=container.offsetHeight||1;
-  try{const saved=localStorage.getItem(ZONE_STORAGE_KEY);if(saved)ZONE_GM=JSON.parse(saved);}catch(e){}
+  try{const saved=localStorage.getItem(ZONE_GM_KEY);if(saved)ZONE_GM=JSON.parse(saved);}catch(e){}
   const z=ZONE_GM,el=document.getElementById('zone-gm');
-  el.style.top=(z[0]*ch)+'px';el.style.left=(z[1]*cw)+'px';
-  el.style.width=(z[2]*cw)+'px';el.style.height=(z[3]*ch)+'px';
+  el.style.top=(z[0]*ch)+'px';el.style.left=(z[1]*cw)+'px';el.style.width=(z[2]*cw)+'px';el.style.height=(z[3]*ch)+'px';
 }
+
+// ===== 枠ドラッグ（GEAR MISSION枠） =====
 function initZoneDrag(){
-  document.querySelectorAll('.zone-box').forEach(zone=>{
-    let dragging=false,resizing=false,startX,startY,startL,startT,startW,startH;
-    const handle=zone.querySelector('.zone-resize-handle');
-    const container=document.getElementById('video-container');
-    zone.addEventListener('touchstart',e=>{
-      if(!editMode||e.target===handle)return;
-      dragging=true;const t=e.touches[0];startX=t.clientX;startY=t.clientY;
-      startL=parseFloat(zone.style.left)||0;startT=parseFloat(zone.style.top)||0;e.stopPropagation();
-    },{passive:true});
-    zone.addEventListener('touchmove',e=>{
-      if(!dragging||!editMode)return;const t=e.touches[0];
-      const dx=t.clientX-startX,dy=t.clientY-startY;
-      const cw=container.offsetWidth,ch=container.offsetHeight;
-      zone.style.left=Math.max(0,Math.min(cw-parseFloat(zone.style.width),startL+dx))+'px';
-      zone.style.top=Math.max(0,Math.min(ch-parseFloat(zone.style.height),startT+dy))+'px';
-      e.preventDefault();
-    },{passive:false});
-    zone.addEventListener('touchend',()=>{dragging=false;});
-    handle.addEventListener('touchstart',e=>{
-      if(!editMode)return;resizing=true;const t=e.touches[0];
-      startX=t.clientX;startY=t.clientY;startW=parseFloat(zone.style.width)||50;startH=parseFloat(zone.style.height)||50;
-      e.stopPropagation();
-    },{passive:true});
-    handle.addEventListener('touchmove',e=>{
-      if(!resizing||!editMode)return;const t=e.touches[0];
-      const dx=t.clientX-startX,dy=t.clientY-startY;
-      const cw=container.offsetWidth,ch=container.offsetHeight;
-      zone.style.width=Math.max(30,Math.min(cw-parseFloat(zone.style.left),startW+dx))+'px';
-      zone.style.height=Math.max(20,Math.min(ch-parseFloat(zone.style.top),startH+dy))+'px';
-      e.preventDefault();
-    },{passive:false});
-    handle.addEventListener('touchend',()=>{resizing=false;});
-    zone.addEventListener('mousedown',e=>{
-      if(!editMode||e.target===handle)return;dragging=true;
-      startX=e.clientX;startY=e.clientY;startL=parseFloat(zone.style.left)||0;startT=parseFloat(zone.style.top)||0;e.preventDefault();
-    });
-    document.addEventListener('mousemove',e=>{
-      if(dragging&&editMode){const dx=e.clientX-startX,dy=e.clientY-startY;const cw=container.offsetWidth,ch=container.offsetHeight;
-      zone.style.left=Math.max(0,Math.min(cw-parseFloat(zone.style.width),startL+dx))+'px';
-      zone.style.top=Math.max(0,Math.min(ch-parseFloat(zone.style.height),startT+dy))+'px';}
-      if(resizing&&editMode){const dx=e.clientX-startX,dy=e.clientY-startY;const cw=container.offsetWidth,ch=container.offsetHeight;
-      zone.style.width=Math.max(30,Math.min(cw-parseFloat(zone.style.left),startW+dx))+'px';
-      zone.style.height=Math.max(20,Math.min(ch-parseFloat(zone.style.top),startH+dy))+'px';}
-    });
-    document.addEventListener('mouseup',()=>{dragging=false;resizing=false;});
-    handle.addEventListener('mousedown',e=>{
-      if(!editMode)return;resizing=true;startX=e.clientX;startY=e.clientY;
-      startW=parseFloat(zone.style.width)||50;startH=parseFloat(zone.style.height)||50;
-      e.preventDefault();e.stopPropagation();
-    });
+  const zone=document.getElementById('zone-gm');
+  initZoneBoxDrag(zone,null);
+}
+// ===== 枠ドラッグ共通 =====
+function initZoneBoxDrag(zone,item){
+  let dragging=false,resizing=false,startX,startY,startL,startT,startW,startH;
+  const handle=zone.querySelector('.zone-resize-handle');
+  const container=document.getElementById('video-container');
+  zone.addEventListener('touchstart',e=>{
+    if(!editMode||e.target===handle)return;
+    dragging=true;const t=e.touches[0];startX=t.clientX;startY=t.clientY;
+    startL=parseFloat(zone.style.left)||0;startT=parseFloat(zone.style.top)||0;e.stopPropagation();
+  },{passive:true});
+  zone.addEventListener('touchmove',e=>{
+    if(!dragging||!editMode)return;const t=e.touches[0];
+    const dx=t.clientX-startX,dy=t.clientY-startY;
+    const cw=container.offsetWidth,ch=container.offsetHeight;
+    zone.style.left=Math.max(0,Math.min(cw-parseFloat(zone.style.width),startL+dx))+'px';
+    zone.style.top=Math.max(0,Math.min(ch-parseFloat(zone.style.height),startT+dy))+'px';
+    e.preventDefault();
+  },{passive:false});
+  zone.addEventListener('touchend',()=>{dragging=false;});
+  handle.addEventListener('touchstart',e=>{
+    if(!editMode)return;resizing=true;const t=e.touches[0];
+    startX=t.clientX;startY=t.clientY;startW=parseFloat(zone.style.width)||50;startH=parseFloat(zone.style.height)||50;
+    e.stopPropagation();
+  },{passive:true});
+  handle.addEventListener('touchmove',e=>{
+    if(!resizing||!editMode)return;const t=e.touches[0];
+    const dx=t.clientX-startX,dy=t.clientY-startY;
+    const cw=container.offsetWidth,ch=container.offsetHeight;
+    zone.style.width=Math.max(30,Math.min(cw-parseFloat(zone.style.left),startW+dx))+'px';
+    zone.style.height=Math.max(20,Math.min(ch-parseFloat(zone.style.top),startH+dy))+'px';
+    e.preventDefault();
+  },{passive:false});
+  handle.addEventListener('touchend',()=>{resizing=false;});
+  zone.addEventListener('mousedown',e=>{
+    if(!editMode||e.target===handle)return;dragging=true;
+    startX=e.clientX;startY=e.clientY;startL=parseFloat(zone.style.left)||0;startT=parseFloat(zone.style.top)||0;e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(dragging&&editMode){const dx=e.clientX-startX,dy=e.clientY-startY;const cw=container.offsetWidth,ch=container.offsetHeight;
+    zone.style.left=Math.max(0,Math.min(cw-parseFloat(zone.style.width),startL+dx))+'px';
+    zone.style.top=Math.max(0,Math.min(ch-parseFloat(zone.style.height),startT+dy))+'px';}
+    if(resizing&&editMode){const dx=e.clientX-startX,dy=e.clientY-startY;const cw=container.offsetWidth,ch=container.offsetHeight;
+    zone.style.width=Math.max(30,Math.min(cw-parseFloat(zone.style.left),startW+dx))+'px';
+    zone.style.height=Math.max(20,Math.min(ch-parseFloat(zone.style.top),startH+dy))+'px';}
+  });
+  document.addEventListener('mouseup',()=>{dragging=false;resizing=false;});
+  handle.addEventListener('mousedown',e=>{
+    if(!editMode)return;resizing=true;startX=e.clientX;startY=e.clientY;
+    startW=parseFloat(zone.style.width)||50;startH=parseFloat(zone.style.height)||50;
+    e.preventDefault();e.stopPropagation();
   });
 }
 
@@ -813,30 +761,26 @@ function openRegModal(itemId){
   document.getElementById('reg-modal-desc').textContent='黄色い枠内に欠品部分が映るように合わせて撮影してください';
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:960},height:{ideal:1280}}})
     .then(s=>{regStream=s;const rv=document.getElementById('reg-video');rv.srcObject=s;
-      // 常に最新のZONE_GM（枠調整後の値）を使う
-      rv.onloadedmetadata=()=>updateRegZoneHighlight(ZONE_GM);})
+      rv.onloadedmetadata=()=>updateRegZoneHighlight(item.zone);})
     .catch(()=>{document.getElementById('reg-modal-desc').textContent='カメラのアクセスを許可してください';});
 }
-
 function updateRegZoneHighlight(zone){
   const wrap=document.getElementById('reg-video-wrap');const hl=document.getElementById('reg-zone-highlight');
   const vw=wrap.offsetWidth;
   hl.style.left=(zone[1]*vw)+'px';hl.style.top=(zone[0]*vw)+'px';hl.style.width=(zone[2]*vw)+'px';hl.style.height=(zone[3]*vw)+'px';
 }
-
 function captureRegImage(){
   const rv=document.getElementById('reg-video');
   const tmpCanvas=document.createElement('canvas');tmpCanvas.width=rv.videoWidth;tmpCanvas.height=rv.videoHeight;
   tmpCanvas.getContext('2d').drawImage(rv,0,0);
   const item=regItems.find(i=>i.id===regTargetId);if(!item){closeRegModal();return;}
-  // 撮影時も最新のZONE_GM（枠調整後の値）を使って切り出す
-  const z=ZONE_GM,w=tmpCanvas.width,h=tmpCanvas.height;
+  // 部品の個別枠（item.zone）で切り出す
+  const z=item.zone,w=tmpCanvas.width,h=tmpCanvas.height;
   const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
   const normCanvas=document.createElement('canvas');normCanvas.width=COMPARE_W;normCanvas.height=COMPARE_H;
   normCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,COMPARE_W,COMPARE_H);
   const imgData=normCanvas.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
-  item.template=imgData;
-  item.hsvProfile=getHsvProfile(imgData);
+  item.template=imgData;item.hsvProfile=getHsvProfile(imgData);
   const thumbCanvas=document.createElement('canvas');thumbCanvas.width=zw;thumbCanvas.height=zh;
   thumbCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,zw,zh);
   const dataURL=thumbCanvas.toDataURL('image/jpeg',0.7);
@@ -854,9 +798,13 @@ function closeRegModal(){
 initWorker();
 window.addEventListener('load',()=>{
   setTimeout(()=>{
-    loadZonePosition();
+    loadZonePositions();
     initZoneDrag();
     loadItems();
+    // 部品枠をオーバーレイに追加
+    regItems.forEach(item=>addZoneBox(item));
+    // 枠位置を再適用（loadItemsで座標が読み込まれた後）
+    regItems.forEach(item=>applyZoneBoxStyle(item));
     try{const m=localStorage.getItem(MODE_STORAGE_KEY);if(m)currentMode=m;}catch(e){}
     try{const c=localStorage.getItem(COLOR_STORAGE_KEY);if(c)currentColor=c;}catch(e){}
     setMode(currentMode);
