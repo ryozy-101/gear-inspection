@@ -401,13 +401,13 @@ function toggleMirror(){
 }
 async function restartCamera(){
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}clearInterval(intervalId);
-  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:mirrored?'user':'environment',width:{ideal:960},height:{ideal:1280}}});
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:mirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}});
   video.srcObject=stream;intervalId=setInterval(runInspection,1500);}
   catch(e){statusSub.textContent='カメラの切り替えに失敗しました';}
 }
 async function startCamera(){
   try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:960},height:{ideal:1280}}});
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:1280}}});
     video.srcObject=stream;scanning=true;
     document.getElementById('btn-start').style.display='none';
     document.getElementById('btn-stop').style.display='block';
@@ -842,7 +842,7 @@ function openRegModal(itemId){
   document.getElementById('reg-camera-modal').style.display='flex';
   document.getElementById('reg-modal-label').textContent=item.name+' 欠品NG を登録';
   document.getElementById('reg-modal-desc').textContent='黄色い枠内に欠品部分が映るように合わせて撮影してください';
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:960},height:{ideal:1280}}})
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:1280}}})
     .then(s=>{regStream=s;const rv=document.getElementById('reg-video');rv.srcObject=s;
       rv.onloadedmetadata=()=>updateRegZoneHighlight(item.zone);})
     .catch(()=>{document.getElementById('reg-modal-desc').textContent='カメラのアクセスを許可してください';});
