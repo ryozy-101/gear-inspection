@@ -18,7 +18,7 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
   position: relative; width: 100%; height: 0; padding-top: 100%;
   background: #111; border-radius: 12px; overflow: hidden; border: 2px solid #ddd;
 }
-#video { position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; display:block; }
+#video { position: absolute; top:50%; left:50%; width:125%; height:125%; transform:translate(-50%,-50%) scale(0.8); object-fit:cover; display:block; transform-origin:center center; }
 #canvas { display: none; }
 #zone-overlay { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
 .zone-box {
@@ -252,7 +252,10 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
     <video id="reg-video" autoplay playsinline muted></video>
     <div id="reg-zone-highlight"></div>
   </div>
-  <button id="reg-capture-btn" onclick="captureRegImage()">📸 この状態で登録</button>
+  <div style="display:flex;gap:8px;margin-top:12px;width:100%;max-width:360px;">
+    <button id="reg-mirror-btn" onclick="toggleRegMirror()" style="flex:1;padding:10px;border-radius:50px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:#555;color:white;">🔄 前面/背面</button>
+    <button id="reg-capture-btn" onclick="captureRegImage()" style="flex:2;padding:13px;border-radius:50px;font-size:15px;font-weight:700;cursor:pointer;border:none;background:#E24B4A;color:white;">📸 この状態で登録</button>
+  </div>
   <button id="reg-cancel-btn" onclick="closeRegModal()">キャンセル</button>
 </div>
 
@@ -285,7 +288,7 @@ let stream=null,scanning=false,intervalId=null;
 let okCount=0,ngCount=0,prodCount=0;
 let workerReady=false,worker=null,audioCtx=null;
 let lastResult=null,alarmActive=false,alarmInterval=null,mirrored=true; // デフォルト前面カメラ
-let regStream=null,regTargetId=null;
+let regStream=null,regTargetId=null,regMirrored=true; // NG登録もデフォルト前面
 let editMode=false,debugVisible=false;
 
 // 静止検知用
@@ -401,13 +404,13 @@ function toggleMirror(){
 }
 async function restartCamera(){
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}clearInterval(intervalId);
-  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:mirrored?'user':'environment',width:{ideal:720},height:{ideal:720}}});
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:mirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}});
   video.srcObject=stream;intervalId=setInterval(runInspection,1500);}
   catch(e){statusSub.textContent='カメラの切り替えに失敗しました';}
 }
 async function startCamera(){
   try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:720},height:{ideal:720}}});
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}});
     video.srcObject=stream;scanning=true;
     document.getElementById('btn-start').style.display='none';
     document.getElementById('btn-stop').style.display='block';
@@ -838,13 +841,26 @@ function initZoneBoxDrag(zone,item){
 }
 
 // ===== NG登録モーダル =====
+function toggleRegMirror(){
+  regMirrored=!regMirrored;
+  if(regStream){regStream.getTracks().forEach(t=>t.stop());regStream=null;}
+  const rv=document.getElementById('reg-video');
+  const item=regItems.find(i=>i.id===regTargetId);
+  navigator.mediaDevices.getUserMedia({video:{facingMode:regMirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}})
+    .then(s=>{regStream=s;rv.srcObject=s;
+      rv.onloadedmetadata=()=>{if(item)updateRegZoneHighlight(item.zone);};})
+    .catch(()=>{});
+  const btn=document.getElementById('reg-mirror-btn');
+  if(btn)btn.textContent=regMirrored?'🔄 前面':'🔄 背面';
+}
 function openRegModal(itemId){
-  regTargetId=itemId;
+  regTargetId=itemId;regMirrored=true;
   const item=regItems.find(i=>i.id===itemId);if(!item)return;
   document.getElementById('reg-camera-modal').style.display='flex';
   document.getElementById('reg-modal-label').textContent=item.name+' 欠品NG を登録';
   document.getElementById('reg-modal-desc').textContent='黄色い枠内に欠品部分が映るように合わせて撮影してください';
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:720},height:{ideal:720}}})
+  const btn=document.getElementById('reg-mirror-btn');if(btn)btn.textContent='🔄 前面';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}})
     .then(s=>{regStream=s;const rv=document.getElementById('reg-video');rv.srcObject=s;
       rv.onloadedmetadata=()=>updateRegZoneHighlight(item.zone);})
     .catch(()=>{document.getElementById('reg-modal-desc').textContent='カメラのアクセスを許可してください';});
