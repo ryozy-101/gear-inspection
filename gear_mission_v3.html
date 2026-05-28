@@ -18,7 +18,7 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
   position: relative; width: 100%; height: 0; padding-top: 100%;
   background: #111; border-radius: 12px; overflow: hidden; border: 2px solid #ddd;
 }
-#video { position: absolute; top:50%; left:50%; width:125%; height:125%; transform:translate(-50%,-50%) scale(0.8); object-fit:cover; display:block; transform-origin:center center; }
+#video { position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; display:block; }
 #canvas { display: none; }
 #zone-overlay { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
 .zone-box {
@@ -130,8 +130,8 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 #reg-zone-highlight { position: absolute; border: 3px solid #FFD700; border-radius: 6px; pointer-events: none; }
 #reg-modal-label { color: white; font-size: 14px; font-weight: 700; margin-bottom: 6px; text-align: center; }
 #reg-modal-desc { color: #aaa; font-size: 11px; margin-bottom: 10px; text-align: center; line-height: 1.5; }
-#reg-capture-btn { padding: 13px 36px; border-radius: 50px; font-size: 15px; font-weight: 700; cursor: pointer; border: none; background: #E24B4A; color: white; margin-top: 12px; }
-#reg-cancel-btn { padding: 9px 28px; border-radius: 50px; font-size: 13px; cursor: pointer; border: none; background: #444; color: white; margin-top: 7px; }
+#reg-capture-btn { padding: 13px 36px; border-radius: 50px; font-size: 15px; font-weight: 700; cursor: pointer; border: none; background: #E24B4A; color: white; margin-top: 12px; width:100%; }
+#reg-cancel-btn { padding: 9px 28px; border-radius: 50px; font-size: 13px; cursor: pointer; border: none; background: #444; color: white; margin-top: 7px; width:100%; max-width:360px; }
 
 #production-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: stretch; }
 #debug-panel { margin-top: 6px; padding: 8px 12px; background: #f0f0f0; border-radius: 10px; font-size: 10px; color: #555; display: none; line-height: 1.7; }
@@ -252,10 +252,8 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
     <video id="reg-video" autoplay playsinline muted></video>
     <div id="reg-zone-highlight"></div>
   </div>
-  <div style="display:flex;gap:8px;margin-top:12px;width:100%;max-width:360px;">
-    <button id="reg-mirror-btn" onclick="toggleRegMirror()" style="flex:1;padding:10px;border-radius:50px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:#555;color:white;">🔄 前面/背面</button>
-    <button id="reg-capture-btn" onclick="captureRegImage()" style="flex:2;padding:13px;border-radius:50px;font-size:15px;font-weight:700;cursor:pointer;border:none;background:#E24B4A;color:white;">📸 この状態で登録</button>
-  </div>
+  <button id="reg-mirror-btn" onclick="toggleRegMirror()" style="margin-top:12px;padding:10px 28px;border-radius:50px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:#555;color:white;width:100%;max-width:360px;">🔄 前面カメラ使用中</button>
+  <button id="reg-capture-btn" onclick="captureRegImage()">📸 この状態で登録</button>
   <button id="reg-cancel-btn" onclick="closeRegModal()">キャンセル</button>
 </div>
 
@@ -851,7 +849,7 @@ function toggleRegMirror(){
       rv.onloadedmetadata=()=>{if(item)updateRegZoneHighlight(item.zone);};})
     .catch(()=>{});
   const btn=document.getElementById('reg-mirror-btn');
-  if(btn)btn.textContent=regMirrored?'🔄 前面':'🔄 背面';
+  if(btn)btn.textContent=regMirrored?'🔄 前面カメラ使用中':'🔄 背面カメラ使用中';
 }
 function openRegModal(itemId){
   regTargetId=itemId;regMirrored=true;
