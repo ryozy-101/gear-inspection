@@ -4,6 +4,35 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>GEAR MISSION 組付け検査 v4</title>
+<script>
+// Service WorkerでTesseractをキャッシュ（2回目以降を高速化）
+if('serviceWorker' in navigator){
+  const swCode=`
+    const CACHE='gm-ocr-v1';
+    const URLS=[
+      'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js',
+      'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/worker.min.js',
+      'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core-simd-lstm.wasm.js',
+    ];
+    self.addEventListener('install',e=>{
+      e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS)).then(()=>self.skipWaiting()));
+    });
+    self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim());});
+    self.addEventListener('fetch',e=>{
+      if(URLS.some(u=>e.request.url.startsWith(u.split('/dist/')[0]))){
+        e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{
+          const clone=res.clone();
+          caches.open(CACHE).then(c=>c.put(e.request,clone));
+          return res;
+        })));
+      }
+    });
+  `;
+  const blob=new Blob([swCode],{type:'application/javascript'});
+  const url=URL.createObjectURL(blob);
+  navigator.serviceWorker.register(url).catch(()=>{});
+}
+</script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding: 6px; min-height: 100vh; }
@@ -275,7 +304,7 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
   <button id="reg-cancel-btn" onclick="closeRegModal()">キャンセル</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
 <script>
 const COMPARE_W=64, COMPARE_H=64, NG_THRESHOLD=0.72;
 const ZONE_GM_KEY='gm_v4_zone_gm';
@@ -560,8 +589,23 @@ function setCheckItemStatus(elemId,status){
 
 // ===== OCR =====
 async function initWorker(){
-  try{worker=await Tesseract.createWorker('eng',1,{logger:()=>{}});workerReady=true;}
-  catch(e){statusSub.textContent='OCRエンジンの初期化に失敗しました';}
+  try{
+    worker=await Tesseract.createWorker('eng',1,{
+      logger:()=>{},
+      workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/worker.min.js',
+      corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core-simd-lstm.wasm.js',
+      langPath:'https://tessdata.projectnaptha.com/4.0.0',
+    });
+    workerReady=true;
+  }catch(e){
+    // フォールバック：オプションなしで再試行
+    try{
+      worker=await Tesseract.createWorker('eng',1,{logger:()=>{}});
+      workerReady=true;
+    }catch(e2){
+      statusSub.textContent='OCRエンジンの初期化に失敗しました';
+    }
+  }
 }
 
 // ===== HSV =====
