@@ -486,15 +486,17 @@ async function restartCamera(){
 }
 async function startCamera(){
   try{
-    // まず前面カメラを試みる、失敗したら制約なしで再試行（iPad対応）
-    let constraints={video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}};
+    // カメラ起動とOCR初期化を並行して実行
+    let cameraPromise;
     try{
-      stream=await navigator.mediaDevices.getUserMedia(constraints);
+      cameraPromise=navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}});
     }catch(e1){
-      // 前面カメラ失敗→制約なしで再試行
-      stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});
-      mirrored=false;
+      cameraPromise=navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});
     }
+    // OCR初期化も同時に開始
+    const ocrPromise=workerReady?Promise.resolve():initWorker();
+    // カメラを先に映す
+    stream=await cameraPromise;
     video.srcObject=stream;scanning=true;
     document.getElementById('btn-start').style.display='none';
     document.getElementById('btn-stop').style.display='block';
@@ -503,8 +505,14 @@ async function startCamera(){
     mirrorBtn.textContent=mirrored?'📷前面':'🔄切替';
     if(mirrored)mirrorBtn.classList.add('active');
     document.getElementById('check-result-panel').style.display='block';
-    resultBadge.style.display='block';setStatus('scanning');
-    if(!workerReady){statusSub.textContent='OCRエンジン初期化中...';await initWorker();}
+    resultBadge.style.display='block';
+    setStatus('scanning');
+    // OCR初期化中はサブテキストで案内
+    if(!workerReady){
+      statusSub.textContent='OCRエンジン初期化中...（そのままお待ちください）';
+      await ocrPromise;
+      statusSub.textContent='製品全体をカメラに映してください';
+    }
     intervalId=setInterval(runInspection,1500);
   }catch(e){
     statusTitle.textContent='カメラへのアクセスを許可してください';
@@ -1010,6 +1018,7 @@ function closeRegModal(){
 }
 
 // ===== 初期化 =====
+// ページ読込と同時にOCR初期化を開始（検査開始を速くするため）
 initWorker();
 window.addEventListener('load',()=>{
   setTimeout(()=>{
