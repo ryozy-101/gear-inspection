@@ -475,19 +475,33 @@ function toggleMirror(){
 }
 async function restartCamera(){
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}clearInterval(intervalId);
-  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:mirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}});
-  video.srcObject=stream;intervalId=setInterval(runInspection,1500);}
-  catch(e){statusSub.textContent='カメラの切り替えに失敗しました';}
+  try{
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:mirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}});
+    }catch(e1){
+      stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});
+    }
+    video.srcObject=stream;intervalId=setInterval(runInspection,1500);
+  }catch(e){statusSub.textContent='カメラの切り替えに失敗しました';}
 }
 async function startCamera(){
   try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}});
+    // まず前面カメラを試みる、失敗したら制約なしで再試行（iPad対応）
+    let constraints={video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}};
+    try{
+      stream=await navigator.mediaDevices.getUserMedia(constraints);
+    }catch(e1){
+      // 前面カメラ失敗→制約なしで再試行
+      stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});
+      mirrored=false;
+    }
     video.srcObject=stream;scanning=true;
     document.getElementById('btn-start').style.display='none';
     document.getElementById('btn-stop').style.display='block';
     const mirrorBtn=document.getElementById('btn-mirror');
     mirrorBtn.style.display='block';
-    mirrorBtn.textContent='📷前面';mirrorBtn.classList.add('active');
+    mirrorBtn.textContent=mirrored?'📷前面':'🔄切替';
+    if(mirrored)mirrorBtn.classList.add('active');
     document.getElementById('check-result-panel').style.display='block';
     resultBadge.style.display='block';setStatus('scanning');
     if(!workerReady){statusSub.textContent='OCRエンジン初期化中...';await initWorker();}
@@ -931,10 +945,16 @@ function toggleRegMirror(){
   if(regStream){regStream.getTracks().forEach(t=>t.stop());regStream=null;}
   const rv=document.getElementById('reg-video');
   const item=regItems.find(i=>i.id===regTargetId);
-  navigator.mediaDevices.getUserMedia({video:{facingMode:regMirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}})
-    .then(s=>{regStream=s;rv.srcObject=s;
-      rv.onloadedmetadata=()=>{if(item)updateRegZoneHighlight(item.zone);};})
-    .catch(()=>{});
+  const tryCamera=async()=>{
+    try{
+      return await navigator.mediaDevices.getUserMedia({video:{facingMode:regMirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}});
+    }catch(e){
+      return await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});
+    }
+  };
+  tryCamera().then(s=>{regStream=s;rv.srcObject=s;
+    rv.onloadedmetadata=()=>{if(item)updateRegZoneHighlight(item.zone);};})
+  .catch(()=>{});
   const btn=document.getElementById('reg-mirror-btn');
   if(btn)btn.textContent=regMirrored?'🔄 前面カメラ使用中':'🔄 背面カメラ使用中';
 }
@@ -945,7 +965,14 @@ function openRegModal(itemId){
   document.getElementById('reg-modal-label').textContent=item.name+' 欠品NG を登録';
   document.getElementById('reg-modal-desc').textContent='黄色い枠内に欠品部分が映るように合わせて撮影してください';
   const btn=document.getElementById('reg-mirror-btn');if(btn)btn.textContent='🔄 前面';
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}})
+  const startRegCamera=async()=>{
+    try{
+      return await navigator.mediaDevices.getUserMedia({video:{facingMode:regMirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}});
+    }catch(e){
+      return await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});
+    }
+  };
+  startRegCamera()
     .then(s=>{regStream=s;const rv=document.getElementById('reg-video');rv.srcObject=s;
       rv.onloadedmetadata=()=>updateRegZoneHighlight(item.zone);})
     .catch(()=>{document.getElementById('reg-modal-desc').textContent='カメラのアクセスを許可してください';});
