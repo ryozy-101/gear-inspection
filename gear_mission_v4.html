@@ -961,7 +961,9 @@ function toggleRegMirror(){
     }
   };
   tryCamera().then(s=>{regStream=s;rv.srcObject=s;
-    rv.onloadedmetadata=()=>{if(item)updateRegZoneHighlight(item.zone);};})
+    rv.onloadedmetadata=()=>{
+      setTimeout(()=>{if(item)updateRegZoneHighlight(item.zone);},100);
+    };})
   .catch(()=>{});
   const btn=document.getElementById('reg-mirror-btn');
   if(btn)btn.textContent=regMirrored?'🔄 前面カメラ使用中':'🔄 背面カメラ使用中';
@@ -982,13 +984,21 @@ function openRegModal(itemId){
   };
   startRegCamera()
     .then(s=>{regStream=s;const rv=document.getElementById('reg-video');rv.srcObject=s;
-      rv.onloadedmetadata=()=>updateRegZoneHighlight(item.zone);})
+      rv.onloadedmetadata=()=>{
+        // wrapの高さが確定するまで少し待つ
+        setTimeout(()=>{if(item)updateRegZoneHighlight(item.zone);},100);
+      };})
     .catch(()=>{document.getElementById('reg-modal-desc').textContent='カメラのアクセスを許可してください';});
 }
 function updateRegZoneHighlight(zone){
-  const wrap=document.getElementById('reg-video-wrap');const hl=document.getElementById('reg-zone-highlight');
+  const wrap=document.getElementById('reg-video-wrap');
+  const hl=document.getElementById('reg-zone-highlight');
   const vw=wrap.offsetWidth;
-  hl.style.left=(zone[1]*vw)+'px';hl.style.top=(zone[0]*vw)+'px';hl.style.width=(zone[2]*vw)+'px';hl.style.height=(zone[3]*vw)+'px';
+  const vh=wrap.offsetHeight; // 実際の高さを使う
+  hl.style.left=(zone[1]*vw)+'px';
+  hl.style.top=(zone[0]*vh)+'px';
+  hl.style.width=(zone[2]*vw)+'px';
+  hl.style.height=(zone[3]*vh)+'px';
 }
 function captureRegImage(){
   const rv=document.getElementById('reg-video');
