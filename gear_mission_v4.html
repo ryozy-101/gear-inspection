@@ -155,7 +155,7 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
   position: relative; width: 100%; max-width: 360px;
   height: 0; padding-top: 100%; overflow: hidden; border-radius: 12px;
 }
-#reg-video { position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:12px; }
+#reg-video { position: absolute; top:50%; left:50%; width:100%; height:100%; transform:translate(-50%,-50%); object-fit:cover; border-radius:12px; }
 #reg-zone-highlight { position: absolute; border: 3px solid #FFD700; border-radius: 6px; pointer-events: none; }
 #reg-modal-label { color: white; font-size: 14px; font-weight: 700; margin-bottom: 6px; text-align: center; }
 #reg-modal-desc { color: #aaa; font-size: 11px; margin-bottom: 10px; text-align: center; line-height: 1.5; }
@@ -1047,13 +1047,9 @@ function openRegModal(itemId){
 function updateRegZoneHighlight(zone){
   const wrap=document.getElementById('reg-video-wrap');
   const hl=document.getElementById('reg-zone-highlight');
-  const rv=document.getElementById('reg-video');
-  // ビデオの実際のアスペクト比でwrapサイズを計算
   const vw=wrap.offsetWidth;
-  const videoAspect=(rv.videoWidth&&rv.videoHeight)?(rv.videoHeight/rv.videoWidth):1;
-  const vh=vw*videoAspect;
-  // wrapの高さをビデオに合わせて更新
-  wrap.style.paddingTop=videoAspect*100+'%';
+  const vh=vw; // 正方形なのでvh=vw
+  wrap.style.paddingTop='100%'; // 正方形に固定
   hl.style.left=(zone[1]*vw)+'px';
   hl.style.top=(zone[0]*vh)+'px';
   hl.style.width=(zone[2]*vw)+'px';
@@ -1061,11 +1057,15 @@ function updateRegZoneHighlight(zone){
 }
 function captureRegImage(){
   const rv=document.getElementById('reg-video');
-  const tmpCanvas=document.createElement('canvas');tmpCanvas.width=rv.videoWidth;tmpCanvas.height=rv.videoHeight;
-  tmpCanvas.getContext('2d').drawImage(rv,0,0);
+  const tmpCanvas=document.createElement('canvas');
+  // 正方形で切り出し（検査画面と同じ比率）
+  const size=Math.min(rv.videoWidth,rv.videoHeight);
+  const offsetX=Math.round((rv.videoWidth-size)/2);
+  const offsetY=Math.round((rv.videoHeight-size)/2);
+  tmpCanvas.width=size;tmpCanvas.height=size;
+  tmpCanvas.getContext('2d').drawImage(rv,offsetX,offsetY,size,size,0,0,size,size);
   const item=regItems.find(i=>i.id===regTargetId);if(!item){closeRegModal();return;}
-  // 部品の個別枠（item.zone）で切り出す
-  const z=item.zone,w=tmpCanvas.width,h=tmpCanvas.height;
+  const z=item.zone,w=size,h=size;
   const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
   const normCanvas=document.createElement('canvas');normCanvas.width=COMPARE_W;normCanvas.height=COMPARE_H;
   normCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,COMPARE_W,COMPARE_H);
