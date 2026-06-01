@@ -47,7 +47,7 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
   position: relative; width: 100%; height: 0; padding-top: 100%;
   background: #111; border-radius: 12px; overflow: hidden; border: 2px solid #ddd;
 }
-#video { position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; display:block; transform:scale(0.75); transform-origin:center center; }
+#video { position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; display:block; }
 #canvas { display: none; }
 #zone-overlay { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
 .zone-box {
@@ -515,17 +515,11 @@ async function restartCamera(){
 }
 async function startCamera(){
   try{
-    // カメラ起動とOCR初期化を並行して実行
-    let cameraPromise;
-    try{
-      cameraPromise=navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}});
-    }catch(e1){
-      cameraPromise=navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});
-    }
-    // OCR初期化も同時に開始
-    const ocrPromise=workerReady?Promise.resolve():initWorker();
-    // カメラを先に映す
-    stream=await cameraPromise;
+    // カメラをすぐ起動
+    let s;
+    try{s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}});}
+    catch(e1){s=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});}
+    stream=s;
     video.srcObject=stream;scanning=true;
     document.getElementById('btn-start').style.display='none';
     document.getElementById('btn-stop').style.display='block';
@@ -535,12 +529,13 @@ async function startCamera(){
     if(mirrored)mirrorBtn.classList.add('active');
     document.getElementById('check-result-panel').style.display='block';
     resultBadge.style.display='block';
-    setStatus('scanning');
-    // OCR初期化中はサブテキストで案内
+    // OCRがまだ準備中なら表示
     if(!workerReady){
-      statusSub.textContent='OCRエンジン初期化中...（そのままお待ちください）';
-      await ocrPromise;
-      statusSub.textContent='製品全体をカメラに映してください';
+      setStatus('scanning');
+      statusSub.textContent='OCR初期化中...（カメラは映っています）';
+      initWorker(); // 並行で初期化（完了を待たない）
+    } else {
+      setStatus('scanning');
     }
     intervalId=setInterval(runInspection,1500);
   }catch(e){
@@ -589,6 +584,7 @@ function setCheckItemStatus(elemId,status){
 
 // ===== OCR =====
 async function initWorker(){
+  if(workerReady)return;
   try{
     worker=await Tesseract.createWorker('eng',1,{
       logger:()=>{},
@@ -597,13 +593,15 @@ async function initWorker(){
       langPath:'https://tessdata.projectnaptha.com/4.0.0',
     });
     workerReady=true;
+    // OCR完了をステータスバーに表示
+    if(scanning)statusSub.textContent='OCR準備完了！製品全体をカメラに映してください';
   }catch(e){
-    // フォールバック：オプションなしで再試行
     try{
       worker=await Tesseract.createWorker('eng',1,{logger:()=>{}});
       workerReady=true;
+      if(scanning)statusSub.textContent='OCR準備完了！製品全体をカメラに映してください';
     }catch(e2){
-      statusSub.textContent='OCRエンジンの初期化に失敗しました';
+      if(scanning)statusSub.textContent='OCRエンジンの初期化に失敗しました';
     }
   }
 }
@@ -1049,8 +1047,13 @@ function openRegModal(itemId){
 function updateRegZoneHighlight(zone){
   const wrap=document.getElementById('reg-video-wrap');
   const hl=document.getElementById('reg-zone-highlight');
+  const rv=document.getElementById('reg-video');
+  // ビデオの実際のアスペクト比でwrapサイズを計算
   const vw=wrap.offsetWidth;
-  const vh=wrap.offsetHeight; // 実際の高さを使う
+  const videoAspect=(rv.videoWidth&&rv.videoHeight)?(rv.videoHeight/rv.videoWidth):1;
+  const vh=vw*videoAspect;
+  // wrapの高さをビデオに合わせて更新
+  wrap.style.paddingTop=videoAspect*100+'%';
   hl.style.left=(zone[1]*vw)+'px';
   hl.style.top=(zone[0]*vh)+'px';
   hl.style.width=(zone[2]*vw)+'px';
