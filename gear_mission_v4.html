@@ -152,10 +152,11 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
   flex-direction: column; align-items: center; justify-content: center; padding: 16px;
 }
 #reg-video-wrap {
-  position: relative; width: 100%; max-width: 440px;
-  height: 0; padding-top: min(100%, 440px); overflow: hidden; border-radius: 12px;
+  position: relative; width: 100%;
+  overflow: hidden; border-radius: 12px;
+  background: #000;
 }
-#reg-video { position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:12px; }
+#reg-video { display:block; width:100%; height:auto; border-radius:12px; }
 #reg-zone-highlight { position: absolute; border: 3px solid #FFD700; border-radius: 6px; pointer-events: none; }
 #reg-modal-label { color: white; font-size: 14px; font-weight: 700; margin-bottom: 6px; text-align: center; }
 #reg-modal-desc { color: #aaa; font-size: 11px; margin-bottom: 10px; text-align: center; line-height: 1.5; }
@@ -1044,12 +1045,39 @@ function openRegModal(itemId){
       };})
     .catch(()=>{document.getElementById('reg-modal-desc').textContent='カメラのアクセスを許可してください';});
 }
+function applyRegVideoSquare(){
+  const rv=document.getElementById('reg-video');
+  const wrap=document.getElementById('reg-video-wrap');
+  if(!rv.videoWidth||!rv.videoHeight)return;
+  const vw=rv.videoWidth, vh=rv.videoHeight;
+  const wrapW=wrap.offsetWidth;
+  // 正方形サイズを決定
+  const size=wrapW;
+  wrap.style.height=size+'px';
+  // videoを正方形にクロップ（中央）
+  if(vw>vh){
+    // 横長→高さに合わせてwidth拡大
+    const scale=size/vh;
+    rv.style.width=(vw*scale)+'px';
+    rv.style.height=size+'px';
+    rv.style.marginLeft=(-((vw*scale-size)/2))+'px';
+    rv.style.marginTop='0';
+  }else{
+    // 縦長→幅に合わせてheight拡大
+    const scale=size/vw;
+    rv.style.width=size+'px';
+    rv.style.height=(vh*scale)+'px';
+    rv.style.marginTop=(-((vh*scale-size)/2))+'px';
+    rv.style.marginLeft='0';
+  }
+}
+
 function updateRegZoneHighlight(zone){
+  applyRegVideoSquare();
   const wrap=document.getElementById('reg-video-wrap');
   const hl=document.getElementById('reg-zone-highlight');
   const vw=wrap.offsetWidth;
-  const vh=vw; // 正方形なのでvh=vw
-  wrap.style.paddingTop='100%'; // 正方形に固定
+  const vh=parseInt(wrap.style.height)||vw;
   hl.style.left=(zone[1]*vw)+'px';
   hl.style.top=(zone[0]*vh)+'px';
   hl.style.width=(zone[2]*vw)+'px';
