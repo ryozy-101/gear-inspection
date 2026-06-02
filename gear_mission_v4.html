@@ -154,8 +154,6 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 }
 #reg-video-wrap {
   position: relative;
-  width: min(100%, calc(100vh - 200px)); /* 画面高さからボタン分を引いた正方形 */
-  aspect-ratio: 1 / 1;
   overflow: hidden; border-radius: 12px;
   background: #000; flex-shrink: 0;
 }
@@ -1031,6 +1029,13 @@ function openRegModal(itemId){
   regTargetId=itemId;regMirrored=true;
   const item=regItems.find(i=>i.id===itemId);if(!item)return;
   document.getElementById('reg-camera-modal').style.display='flex';
+  // wrapを正方形に強制設定（画面幅かボタン込み高さの小さい方）
+  const wrap=document.getElementById('reg-video-wrap');
+  const modalPad=32; // padding 16px×2
+  const btnH=160; // ボタン類の高さ
+  const maxSize=Math.min(window.innerWidth-modalPad, window.innerHeight-btnH);
+  wrap.style.width=maxSize+'px';
+  wrap.style.height=maxSize+'px';
   document.getElementById('reg-modal-label').textContent=item.name+' 欠品NG を登録';
   document.getElementById('reg-modal-desc').textContent='黄色い枠内に欠品部分が映るように合わせて撮影してください';
   const btn=document.getElementById('reg-mirror-btn');if(btn)btn.textContent='🔄 前面カメラ使用中';
