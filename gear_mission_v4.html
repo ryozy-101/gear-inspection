@@ -501,7 +501,7 @@ function startAlarm(){
 function stopAlarm(){
   alarmActive=false;clearInterval(alarmInterval);alarmInterval=null;
   document.getElementById('btn-alarm-stop').style.display='none';
-  lastResult=null;setStatus('scanning');
+  lastResult=null;isJudging=false;setStatus('scanning');
 }
 
 // ===== カメラ =====
@@ -559,7 +559,7 @@ function stopCamera(){
   document.getElementById('btn-mirror').style.display='none';
   document.getElementById('btn-mirror').textContent='📷前面';
   mirrored=true;stopAlarm();setStatus('idle');
-  prevGmFrame=null;stableFrameCount=0;judged=false;lastResult=null;
+  prevGmFrame=null;stableFrameCount=0;judged=false;lastResult=null;isJudging=false;
 }
 
 // ===== ステータス =====
@@ -717,8 +717,13 @@ async function runInspection(){
 }
 
 // ===== 実際の判定処理 =====
+let isJudging=false; // 判定中ロック
+
 async function doJudge(){
+  if(isJudging)return; // 判定中なら重複実行しない
+  isJudging=true;
   judged=true;
+  setStatus('waiting','判定中...');
   let hasNG=false;const itemResults={};
 
   // OCR判定
@@ -739,10 +744,10 @@ async function doJudge(){
     const scoreN=keywords.filter(k=>tN.includes(k)).length;
     const scoreF=keywords.filter(k=>tF.includes(k)).length;
     if(debugVisible){document.getElementById('dbg-normal').textContent=scoreN;document.getElementById('dbg-flipped').textContent=scoreF;document.getElementById('dbg-text-n').textContent=tN.slice(0,30);document.getElementById('dbg-text-f').textContent=tF.slice(0,30);}
-    if(scoreN===0&&scoreF===0){setCheckItemStatus('r-item-ocr1',null);if(currentMode==='full')setCheckItemStatus('r-item-ocr2',null);judged=false;return;}
+    if(scoreN===0&&scoreF===0){setCheckItemStatus('r-item-ocr1',null);if(currentMode==='full')setCheckItemStatus('r-item-ocr2',null);judged=false;isJudging=false;return;}
     else if(scoreF>scoreN){setCheckItemStatus('r-item-ocr1','ng');if(currentMode==='full')setCheckItemStatus('r-item-ocr2','ok');hasNG=true;itemResults['ocr']='ng';}
     else{setCheckItemStatus('r-item-ocr1','ok');if(currentMode==='full')setCheckItemStatus('r-item-ocr2','ok');itemResults['ocr']='ok';}
-  }catch(e){judged=false;return;}
+  }catch(e){judged=false;isJudging=false;return;}
 
   // 全機能モード：エッジ検出＋HSV組み合わせ判定
   if(currentMode==='full'){
@@ -775,7 +780,7 @@ async function doJudge(){
   }
 
   const valid=Object.values(itemResults).filter(v=>v!==null&&v!=='noreg');
-  if(valid.length===0){judged=false;return;}
+  if(valid.length===0){judged=false;isJudging=false;return;}
 
   // 生産数カウント（1台1回）
   prodCount++;prodEl.textContent=prodCount;
@@ -789,6 +794,7 @@ async function doJudge(){
   } else {
     okCount++;okEl.textContent=okCount;setStatus('ok');playOK();
   }
+  isJudging=false;
 }
 
 // ===== 部品枠のオーバーレイ管理 =====
