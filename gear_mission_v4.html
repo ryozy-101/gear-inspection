@@ -150,11 +150,14 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
   display: none; position: fixed; top:0; left:0; right:0; bottom:0;
   background: rgba(0,0,0,0.9); z-index: 100;
   flex-direction: column; align-items: center; justify-content: center; padding: 16px;
+  overflow-y: auto;
 }
 #reg-video-wrap {
-  position: relative; width: 100%;
-  height: 0; padding-top: 100%; overflow: hidden; border-radius: 12px;
-  background: #000;
+  position: relative;
+  width: min(100%, calc(100vh - 200px)); /* 画面高さからボタン分を引いた正方形 */
+  aspect-ratio: 1 / 1;
+  overflow: hidden; border-radius: 12px;
+  background: #000; flex-shrink: 0;
 }
 #reg-video { position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; display:block; border-radius:12px; }
 #reg-zone-highlight { position: absolute; border: 3px solid #FFD700; border-radius: 6px; pointer-events: none; }
@@ -1049,7 +1052,7 @@ function updateRegZoneHighlight(zone){
   const wrap=document.getElementById('reg-video-wrap');
   const hl=document.getElementById('reg-zone-highlight');
   const vw=wrap.offsetWidth;
-  const vh=vw; // padding-top:100%なので正方形
+  const vh=wrap.offsetHeight||vw;
   hl.style.left=(zone[1]*vw)+'px';
   hl.style.top=(zone[0]*vh)+'px';
   hl.style.width=(zone[2]*vw)+'px';
