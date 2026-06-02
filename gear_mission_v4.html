@@ -150,12 +150,15 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
   display: none; position: fixed; top:0; left:0; right:0; bottom:0;
   background: rgba(0,0,0,0.9); z-index: 100;
   flex-direction: column; align-items: center; justify-content: center; padding: 16px;
+  box-sizing: border-box;
 }
 #reg-video-wrap {
   position: relative;
   overflow: hidden; border-radius: 12px;
-  background: #000; flex-shrink: 0;
-  flex-grow: 0;
+  background: #000;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  align-self: center;
 }
 #reg-video { display:none !important; }
 #reg-canvas-preview { display:block; border-radius:12px; }
@@ -1031,29 +1034,29 @@ function startRegPreview(){
   const wrap=document.getElementById('reg-video-wrap');
   if(regPreviewLoop)cancelAnimationFrame(regPreviewLoop);
 
-  // サイズを計算して固定（一度だけ）
-  const modalPad=32,btnH=220;
-  const size=Math.min(window.innerWidth-modalPad, window.innerHeight-btnH);
-  wrap.style.width=size+'px';
-  wrap.style.height=size+'px';
-  wrap.style.minWidth=size+'px';
-  wrap.style.minHeight=size+'px';
-  wrap.style.maxWidth=size+'px';
-  wrap.style.maxHeight=size+'px';
-  cvs.width=size;
-  cvs.height=size;
-  cvs.style.width=size+'px';
-  cvs.style.height=size+'px';
+  // サイズを計算して完全固定
+  const modalPad=32, btnH=220;
+  const size=Math.min(window.innerWidth-modalPad, window.innerHeight-btnH, 400);
+  const sizeStr=size+'px';
+
+  // inlineスタイルで強制固定
+  wrap.setAttribute('style',
+    `position:relative; overflow:hidden; border-radius:12px; background:#000;`+
+    `width:${sizeStr} !important; height:${sizeStr} !important;`+
+    `min-width:${sizeStr}; min-height:${sizeStr};`+
+    `max-width:${sizeStr}; max-height:${sizeStr};`+
+    `flex-shrink:0; flex-grow:0; align-self:center;`
+  );
+  cvs.width=size; cvs.height=size;
+  cvs.style.cssText=`display:block; width:${sizeStr}; height:${sizeStr}; border-radius:12px;`;
 
   const draw=()=>{
-    if(!regStream){return;}
-    if(rv.readyState>=2&&rv.videoWidth&&rv.videoHeight){
-      const vw=rv.videoWidth,vh=rv.videoHeight;
+    if(!regStream)return;
+    if(rv.readyState>=2 && rv.videoWidth && rv.videoHeight){
+      const vw=rv.videoWidth, vh=rv.videoHeight;
       const srcSize=Math.min(vw,vh);
-      const sx=(vw-srcSize)/2,sy=(vh-srcSize)/2;
-      const ctx2=cvs.getContext('2d');
-      ctx2.drawImage(rv,sx,sy,srcSize,srcSize,0,0,size,size);
-      // 枠更新
+      const sx=(vw-srcSize)/2, sy=(vh-srcSize)/2;
+      cvs.getContext('2d').drawImage(rv,sx,sy,srcSize,srcSize,0,0,size,size);
       const item=regItems.find(i=>i.id===regTargetId);
       if(item)updateRegZoneHighlight(item.zone);
     }
