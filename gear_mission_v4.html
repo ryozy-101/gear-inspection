@@ -4,6 +4,35 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>GEAR MISSION 組付け検査 v4</title>
+<script>
+// Service WorkerでTesseractをキャッシュ（2回目以降を高速化）
+if('serviceWorker' in navigator){
+  const swCode=`
+    const CACHE='gm-ocr-v1';
+    const URLS=[
+      'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js',
+      'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/worker.min.js',
+      'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core-simd-lstm.wasm.js',
+    ];
+    self.addEventListener('install',e=>{
+      e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS)).then(()=>self.skipWaiting()));
+    });
+    self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim());});
+    self.addEventListener('fetch',e=>{
+      if(URLS.some(u=>e.request.url.startsWith(u.split('/dist/')[0]))){
+        e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{
+          const clone=res.clone();
+          caches.open(CACHE).then(c=>c.put(e.request,clone));
+          return res;
+        })));
+      }
+    });
+  `;
+  const blob=new Blob([swCode],{type:'application/javascript'});
+  const url=URL.createObjectURL(blob);
+  navigator.serviceWorker.register(url).catch(()=>{});
+}
+</script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding: 6px; min-height: 100vh; }
@@ -123,10 +152,14 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
   flex-direction: column; align-items: center; justify-content: center; padding: 16px;
 }
 #reg-video-wrap {
-  position: relative; width: 100%; max-width: 360px;
-  height: 0; padding-top: 100%; overflow: hidden; border-radius: 12px;
+  position: relative;
+  overflow: hidden; border-radius: 12px;
+  background: #000; flex-shrink: 0;
+  flex-grow: 0;
 }
-#reg-video { position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:12px; }
+#reg-video { display:none; } /* 非表示にしてcanvasで描画 */
+#reg-canvas-preview { display:block; border-radius:12px; }
+#reg-video { position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; display:none; border-radius:12px; }
 #reg-zone-highlight { position: absolute; border: 3px solid #FFD700; border-radius: 6px; pointer-events: none; }
 #reg-modal-label { color: white; font-size: 14px; font-weight: 700; margin-bottom: 6px; text-align: center; }
 #reg-modal-desc { color: #aaa; font-size: 11px; margin-bottom: 10px; text-align: center; line-height: 1.5; }
@@ -268,6 +301,7 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
   <div id="reg-modal-desc">黄色い枠内に欠品部分が映るように合わせて撮影してください</div>
   <div id="reg-video-wrap">
     <video id="reg-video" autoplay playsinline muted></video>
+    <canvas id="reg-canvas-preview"></canvas>
     <div id="reg-zone-highlight"></div>
   </div>
   <button id="reg-mirror-btn" onclick="toggleRegMirror()" style="margin-top:12px;padding:10px 28px;border-radius:50px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:#555;color:white;width:100%;max-width:360px;">🔄 前面カメラ使用中</button>
@@ -275,7 +309,7 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
   <button id="reg-cancel-btn" onclick="closeRegModal()">キャンセル</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
 <script>
 const COMPARE_W=64, COMPARE_H=64, NG_THRESHOLD=0.72;
 const ZONE_GM_KEY='gm_v4_zone_gm';
@@ -475,22 +509,39 @@ function toggleMirror(){
 }
 async function restartCamera(){
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}clearInterval(intervalId);
-  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:mirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}});
-  video.srcObject=stream;intervalId=setInterval(runInspection,1500);}
-  catch(e){statusSub.textContent='カメラの切り替えに失敗しました';}
+  try{
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:mirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}});
+    }catch(e1){
+      stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});
+    }
+    video.srcObject=stream;intervalId=setInterval(runInspection,1500);
+  }catch(e){statusSub.textContent='カメラの切り替えに失敗しました';}
 }
 async function startCamera(){
   try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}});
+    // カメラをすぐ起動
+    let s;
+    try{s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}});}
+    catch(e1){s=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});}
+    stream=s;
     video.srcObject=stream;scanning=true;
     document.getElementById('btn-start').style.display='none';
     document.getElementById('btn-stop').style.display='block';
     const mirrorBtn=document.getElementById('btn-mirror');
     mirrorBtn.style.display='block';
-    mirrorBtn.textContent='📷前面';mirrorBtn.classList.add('active');
+    mirrorBtn.textContent=mirrored?'📷前面':'🔄切替';
+    if(mirrored)mirrorBtn.classList.add('active');
     document.getElementById('check-result-panel').style.display='block';
-    resultBadge.style.display='block';setStatus('scanning');
-    if(!workerReady){statusSub.textContent='OCRエンジン初期化中...';await initWorker();}
+    resultBadge.style.display='block';
+    // OCRがまだ準備中なら表示
+    if(!workerReady){
+      setStatus('scanning');
+      statusSub.textContent='OCR初期化中...（カメラは映っています）';
+      initWorker(); // 並行で初期化（完了を待たない）
+    } else {
+      setStatus('scanning');
+    }
     intervalId=setInterval(runInspection,1500);
   }catch(e){
     statusTitle.textContent='カメラへのアクセスを許可してください';
@@ -538,8 +589,26 @@ function setCheckItemStatus(elemId,status){
 
 // ===== OCR =====
 async function initWorker(){
-  try{worker=await Tesseract.createWorker('eng',1,{logger:()=>{}});workerReady=true;}
-  catch(e){statusSub.textContent='OCRエンジンの初期化に失敗しました';}
+  if(workerReady)return;
+  try{
+    worker=await Tesseract.createWorker('eng',1,{
+      logger:()=>{},
+      workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/worker.min.js',
+      corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core-simd-lstm.wasm.js',
+      langPath:'https://tessdata.projectnaptha.com/4.0.0',
+    });
+    workerReady=true;
+    // OCR完了をステータスバーに表示
+    if(scanning)statusSub.textContent='OCR準備完了！製品全体をカメラに映してください';
+  }catch(e){
+    try{
+      worker=await Tesseract.createWorker('eng',1,{logger:()=>{}});
+      workerReady=true;
+      if(scanning)statusSub.textContent='OCR準備完了！製品全体をカメラに映してください';
+    }catch(e2){
+      if(scanning)statusSub.textContent='OCRエンジンの初期化に失敗しました';
+    }
+  }
 }
 
 // ===== HSV =====
@@ -600,7 +669,20 @@ function calcFrameDiff(f1,f2){
 
 // ===== 検査処理 =====
 async function runInspection(){
-  if(!scanning||!workerReady||video.videoWidth===0)return;
+  if(!scanning||!workerReady)return;
+  // カメラストリーム切断検知→自動再接続
+  if(!stream||video.readyState===0||video.videoWidth===0){
+    if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+    try{
+      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:mirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}}).catch(()=>
+        navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}})
+      );
+      stream=s;video.srcObject=s;
+      statusSub.textContent='カメラを再接続しました';
+    }catch(e){statusSub.textContent='カメラの再接続に失敗しました';}
+    return;
+  }
+  if(video.videoWidth===0)return;
   canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx.drawImage(video,0,0);
 
   // --- 静止検知 ---
@@ -928,49 +1010,109 @@ function initZoneBoxDrag(zone,item){
 // ===== NG登録モーダル =====
 function toggleRegMirror(){
   regMirrored=!regMirrored;
+  stopRegPreview();
   if(regStream){regStream.getTracks().forEach(t=>t.stop());regStream=null;}
   const rv=document.getElementById('reg-video');
-  const item=regItems.find(i=>i.id===regTargetId);
-  navigator.mediaDevices.getUserMedia({video:{facingMode:regMirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}})
-    .then(s=>{regStream=s;rv.srcObject=s;
-      rv.onloadedmetadata=()=>{if(item)updateRegZoneHighlight(item.zone);};})
-    .catch(()=>{});
+  const tryCamera=async()=>{
+    try{return await navigator.mediaDevices.getUserMedia({video:{facingMode:regMirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}});}
+    catch(e){return await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});}
+  };
+  tryCamera().then(s=>{
+    regStream=s;rv.srcObject=s;
+    rv.onloadedmetadata=()=>{startRegPreview();};
+  }).catch(()=>{});
   const btn=document.getElementById('reg-mirror-btn');
   if(btn)btn.textContent=regMirrored?'🔄 前面カメラ使用中':'🔄 背面カメラ使用中';
 }
+let regPreviewLoop=null;
+
+function startRegPreview(){
+  const rv=document.getElementById('reg-video');
+  const cvs=document.getElementById('reg-canvas-preview');
+  const wrap=document.getElementById('reg-video-wrap');
+  if(regPreviewLoop)cancelAnimationFrame(regPreviewLoop);
+
+  // サイズを計算して固定（一度だけ）
+  const modalPad=32,btnH=220;
+  const size=Math.min(window.innerWidth-modalPad, window.innerHeight-btnH);
+  wrap.style.width=size+'px';
+  wrap.style.height=size+'px';
+  wrap.style.minWidth=size+'px';
+  wrap.style.minHeight=size+'px';
+  wrap.style.maxWidth=size+'px';
+  wrap.style.maxHeight=size+'px';
+  cvs.width=size;
+  cvs.height=size;
+  cvs.style.width=size+'px';
+  cvs.style.height=size+'px';
+
+  const draw=()=>{
+    if(!regStream){return;}
+    if(rv.readyState>=2&&rv.videoWidth&&rv.videoHeight){
+      const vw=rv.videoWidth,vh=rv.videoHeight;
+      const srcSize=Math.min(vw,vh);
+      const sx=(vw-srcSize)/2,sy=(vh-srcSize)/2;
+      const ctx2=cvs.getContext('2d');
+      ctx2.drawImage(rv,sx,sy,srcSize,srcSize,0,0,size,size);
+      // 枠更新
+      const item=regItems.find(i=>i.id===regTargetId);
+      if(item)updateRegZoneHighlight(item.zone);
+    }
+    regPreviewLoop=requestAnimationFrame(draw);
+  };
+  draw();
+}
+
+function stopRegPreview(){
+  if(regPreviewLoop){cancelAnimationFrame(regPreviewLoop);regPreviewLoop=null;}
+}
+
 function openRegModal(itemId){
   regTargetId=itemId;regMirrored=true;
   const item=regItems.find(i=>i.id===itemId);if(!item)return;
   document.getElementById('reg-camera-modal').style.display='flex';
   document.getElementById('reg-modal-label').textContent=item.name+' 欠品NG を登録';
   document.getElementById('reg-modal-desc').textContent='黄色い枠内に欠品部分が映るように合わせて撮影してください';
-  const btn=document.getElementById('reg-mirror-btn');if(btn)btn.textContent='🔄 前面';
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}})
-    .then(s=>{regStream=s;const rv=document.getElementById('reg-video');rv.srcObject=s;
-      rv.onloadedmetadata=()=>updateRegZoneHighlight(item.zone);})
+  const btn=document.getElementById('reg-mirror-btn');if(btn)btn.textContent='🔄 前面カメラ使用中';
+  const startRegCamera=async()=>{
+    try{return await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}});}
+    catch(e){return await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});}
+  };
+  startRegCamera()
+    .then(s=>{
+      regStream=s;
+      const rv=document.getElementById('reg-video');
+      rv.srcObject=s;
+      rv.onloadedmetadata=()=>{startRegPreview();};
+    })
     .catch(()=>{document.getElementById('reg-modal-desc').textContent='カメラのアクセスを許可してください';});
 }
 function updateRegZoneHighlight(zone){
-  const wrap=document.getElementById('reg-video-wrap');const hl=document.getElementById('reg-zone-highlight');
+  const wrap=document.getElementById('reg-video-wrap');
+  const hl=document.getElementById('reg-zone-highlight');
   const vw=wrap.offsetWidth;
-  hl.style.left=(zone[1]*vw)+'px';hl.style.top=(zone[0]*vw)+'px';hl.style.width=(zone[2]*vw)+'px';hl.style.height=(zone[3]*vw)+'px';
+  const vh=wrap.offsetHeight||vw;
+  hl.style.left=(zone[1]*vw)+'px';
+  hl.style.top=(zone[0]*vh)+'px';
+  hl.style.width=(zone[2]*vw)+'px';
+  hl.style.height=(zone[3]*vh)+'px';
 }
 function captureRegImage(){
-  const rv=document.getElementById('reg-video');
-  const tmpCanvas=document.createElement('canvas');tmpCanvas.width=rv.videoWidth;tmpCanvas.height=rv.videoHeight;
-  tmpCanvas.getContext('2d').drawImage(rv,0,0);
+  // canvasプレビュー（正方形クロップ済み）から切り出す
+  const cvs=document.getElementById('reg-canvas-preview');
   const item=regItems.find(i=>i.id===regTargetId);if(!item){closeRegModal();return;}
-  // 部品の個別枠（item.zone）で切り出す
-  const z=item.zone,w=tmpCanvas.width,h=tmpCanvas.height;
-  const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
+  const size=cvs.width;
+  const z=item.zone;
+  const zx=Math.round(z[1]*size),zy=Math.round(z[0]*size);
+  const zw=Math.round(z[2]*size),zh=Math.round(z[3]*size);
   const normCanvas=document.createElement('canvas');normCanvas.width=COMPARE_W;normCanvas.height=COMPARE_H;
-  normCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,COMPARE_W,COMPARE_H);
+  normCanvas.getContext('2d').drawImage(cvs,zx,zy,zw,zh,0,0,COMPARE_W,COMPARE_H);
   const imgData=normCanvas.getContext('2d').getImageData(0,0,COMPARE_W,COMPARE_H);
   item.template=imgData;
   item.hsvProfile=getHsvProfile(imgData);
   item.edgeProfile=applyEdge(imgData,getEdgeThreshold());
   const thumbCanvas=document.createElement('canvas');thumbCanvas.width=zw;thumbCanvas.height=zh;
-  thumbCanvas.getContext('2d').drawImage(tmpCanvas,zx,zy,zw,zh,0,0,zw,zh);
+  thumbCanvas.getContext('2d').drawImage(cvs,zx,zy,zw,zh,0,0,zw,zh);
   const dataURL=thumbCanvas.toDataURL('image/jpeg',0.7);
   item.dataURL=dataURL;
   try{localStorage.setItem('gm_v4_ng_item_'+item.id,dataURL);}catch(e){}
@@ -978,11 +1120,13 @@ function captureRegImage(){
   alert('✅ 登録完了！次回から自動で読み込まれます。');
 }
 function closeRegModal(){
+  stopRegPreview();
   document.getElementById('reg-camera-modal').style.display='none';
   if(regStream){regStream.getTracks().forEach(t=>t.stop());regStream=null;}
 }
 
 // ===== 初期化 =====
+// ページ読込と同時にOCR初期化を開始（検査開始を速くするため）
 initWorker();
 window.addEventListener('load',()=>{
   setTimeout(()=>{
