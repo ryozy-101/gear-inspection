@@ -155,6 +155,7 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
   position: relative;
   overflow: hidden; border-radius: 12px;
   background: #000; flex-shrink: 0;
+  flex-grow: 0;
 }
 #reg-video { display:none; } /* 非表示にしてcanvasで描画 */
 #reg-canvas-preview { display:block; border-radius:12px; }
@@ -1030,23 +1031,33 @@ function startRegPreview(){
   const cvs=document.getElementById('reg-canvas-preview');
   const wrap=document.getElementById('reg-video-wrap');
   if(regPreviewLoop)cancelAnimationFrame(regPreviewLoop);
+
+  // サイズを計算して固定（一度だけ）
+  const modalPad=32,btnH=220;
+  const size=Math.min(window.innerWidth-modalPad, window.innerHeight-btnH);
+  wrap.style.width=size+'px';
+  wrap.style.height=size+'px';
+  wrap.style.minWidth=size+'px';
+  wrap.style.minHeight=size+'px';
+  wrap.style.maxWidth=size+'px';
+  wrap.style.maxHeight=size+'px';
+  cvs.width=size;
+  cvs.height=size;
+  cvs.style.width=size+'px';
+  cvs.style.height=size+'px';
+
   const draw=()=>{
-    if(!regStream||rv.readyState<2){regPreviewLoop=requestAnimationFrame(draw);return;}
-    const vw=rv.videoWidth,vh=rv.videoHeight;
-    if(!vw||!vh){regPreviewLoop=requestAnimationFrame(draw);return;}
-    // 正方形サイズ計算
-    const modalPad=32,btnH=180;
-    const size=Math.min(window.innerWidth-modalPad,window.innerHeight-btnH);
-    wrap.style.width=size+'px';wrap.style.height=size+'px';
-    cvs.width=size;cvs.height=size;
-    const ctx2=cvs.getContext('2d');
-    // 中央正方形クロップして描画
-    const srcSize=Math.min(vw,vh);
-    const sx=(vw-srcSize)/2,sy=(vh-srcSize)/2;
-    ctx2.drawImage(rv,sx,sy,srcSize,srcSize,0,0,size,size);
-    // 枠を再描画
-    const item=regItems.find(i=>i.id===regTargetId);
-    if(item)updateRegZoneHighlight(item.zone);
+    if(!regStream){return;}
+    if(rv.readyState>=2&&rv.videoWidth&&rv.videoHeight){
+      const vw=rv.videoWidth,vh=rv.videoHeight;
+      const srcSize=Math.min(vw,vh);
+      const sx=(vw-srcSize)/2,sy=(vh-srcSize)/2;
+      const ctx2=cvs.getContext('2d');
+      ctx2.drawImage(rv,sx,sy,srcSize,srcSize,0,0,size,size);
+      // 枠更新
+      const item=regItems.find(i=>i.id===regTargetId);
+      if(item)updateRegZoneHighlight(item.zone);
+    }
     regPreviewLoop=requestAnimationFrame(draw);
   };
   draw();
