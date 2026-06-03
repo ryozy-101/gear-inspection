@@ -144,6 +144,7 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
       <span class="setting-label">正常キーワード</span>
       <input type="text" class="setting-input" id="kw-normal" placeholder="例：GEAR MISSION" maxlength="30">
     </div>
+    <div style="font-size:10px;color:#aaa;margin-bottom:6px;padding-left:4px;">💡 短いキーワード推奨（例：「18」「GEAR」）。読み間違えやすい文字（4→A等）は避けると精度UP</div>
     <div class="setting-row">
       <span class="setting-label">上下逆判定</span>
       <div class="toggle-row">
@@ -422,11 +423,18 @@ async function initWorker(){
       corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core-simd-lstm.wasm.js',
       langPath:'https://tessdata.projectnaptha.com/4.0.0',
     });
+    // PSM6：均一なテキストブロックとして認識
+    await worker.setParameters({
+      tessedit_pageseg_mode:'6',
+      tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-.',
+    });
     workerReady=true;
     if(scanning)statusSub.textContent='製品をカメラに映してください';
   }catch(e){
-    try{worker=await Tesseract.createWorker('eng',1,{logger:()=>{}});workerReady=true;}
-    catch(e2){if(scanning)statusSub.textContent='OCRエンジンの初期化に失敗しました';}
+    try{
+      worker=await Tesseract.createWorker('eng',1,{logger:()=>{}});
+      workerReady=true;
+    }catch(e2){if(scanning)statusSub.textContent='OCRエンジンの初期化に失敗しました';}
   }
 }
 
