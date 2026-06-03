@@ -195,7 +195,10 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
     正位置スコア: <span id="dbg-normal">-</span><br>
     180°回転スコア: <span id="dbg-flipped">-</span><br>
     正位置テキスト: <span id="dbg-text-n">-</span><br>
-    回転テキスト: <span id="dbg-text-f">-</span>
+    回転テキスト: <span id="dbg-text-f">-</span><br>
+    <strong>📌 最後に読んだテキスト（消えない）</strong><br>
+    <span id="dbg-last-text" style="word-break:break-all;color:#333;background:#fff;padding:4px;border-radius:4px;display:block;margin-top:2px;font-size:11px;">-</span>
+    <button onclick="document.getElementById('dbg-last-text').textContent='-'" style="margin-top:4px;padding:3px 8px;font-size:10px;border:1px solid #ccc;border-radius:4px;background:#f0f0f0;cursor:pointer;">クリア</button>
   </div>
   <button onclick="toggleDebug()" style="width:100%;margin-top:6px;padding:6px;border-radius:8px;border:1px solid #ccc;background:#fff;font-size:11px;color:#888;cursor:pointer;">🔬 デバッグ表示 ON/OFF</button>
 </div>
@@ -533,6 +536,8 @@ async function doJudge(){
       document.getElementById('dbg-flipped').textContent=scoreF;
       document.getElementById('dbg-text-n').textContent=tN.slice(0,40);
       document.getElementById('dbg-text-f').textContent=tF.slice(0,40);
+      // 最後に読んだテキストを保持（消えない）
+      if(tN.length>0)document.getElementById('dbg-last-text').textContent='正位置:'+tN.slice(0,60)+(tF?'　回転:'+tF.slice(0,60):'');
     }
 
     if(scoreN===0&&scoreF===0){
