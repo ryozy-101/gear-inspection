@@ -282,7 +282,7 @@ function resetAllCounts(){
   if(!confirm('生産数・OK・NG件数をリセットしますか？'))return;
   okCount=0;ngCount=0;prodCount=0;
   okEl.textContent=0;ngEl.textContent=0;prodEl.textContent=0;
-  lastResult=null;prevGmFrame=null;stableFrameCount=0;judged=false;isJudging=false;
+  lastResult=null;prevGmFrame=null;stableFrameCount=0;judged=false;isJudging=false;judgeRetryCount=0;
 }
 
 // ===== デバッグ =====
@@ -374,7 +374,7 @@ function stopCamera(){
   document.getElementById('btn-stop').style.display='none';
   document.getElementById('btn-mirror').style.display='none';
   mirrored=true;stopAlarm();setStatus('idle');
-  prevGmFrame=null;stableFrameCount=0;judged=false;isJudging=false;lastResult=null;
+  prevGmFrame=null;stableFrameCount=0;judged=false;isJudging=false;lastResult=null;judgeRetryCount=0;
 }
 
 // ===== ステータス =====
@@ -480,6 +480,9 @@ async function runInspection(){
 }
 
 // ===== 判定処理 =====
+let judgeRetryCount=0;
+const JUDGE_RETRY_MAX=3;
+
 async function doJudge(){
   if(isJudging)return;
   isJudging=true;judged=true;
@@ -533,11 +536,23 @@ async function doJudge(){
     }
 
     if(scoreN===0&&scoreF===0){
-      // 読めない→判定不能
-      setCheckItemStatus('r-item-ocr1',null);
-      setCheckItemStatus('r-item-ocr2',null);
-      isJudging=false;judged=false;return;
+      // 読めない→リトライ
+      judgeRetryCount++;
+      if(judgeRetryCount>=JUDGE_RETRY_MAX){
+        // リトライ上限→スキャン状態に戻す
+        judgeRetryCount=0;
+        setCheckItemStatus('r-item-ocr1',null);
+        setCheckItemStatus('r-item-ocr2',null);
+        judged=false;isJudging=false;
+        setStatus('scanning');
+      }else{
+        setCheckItemStatus('r-item-ocr1',null);
+        setCheckItemStatus('r-item-ocr2',null);
+        judged=false;isJudging=false;
+      }
+      return;
     }
+    judgeRetryCount=0;
 
     let hasNG=false;
 
@@ -567,7 +582,7 @@ async function doJudge(){
     }else{
       okCount++;okEl.textContent=okCount;setStatus('ok');playOK();
     }
-  }catch(e){judged=false;}
+  }catch(e){judged=false;isJudging=false;}
   isJudging=false;
 }
 
