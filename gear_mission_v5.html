@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GEAR MISSION 組付け検査 v5</title>
+<script>
+if('serviceWorker' in navigator){
+  const swCode=`
+    const CACHE='gm-ocr-v2';
+    const URLS=[
+      'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js',
+      'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/worker.min.js',
+      'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core-simd-lstm.wasm.js',
+    ];
+    self.addEventListener('install',e=>{
+      e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS)).then(()=>self.skipWaiting()));
+    });
+    self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim());});
+    self.addEventListener('fetch',e=>{
+      if(URLS.some(u=>e.request.url.includes('tesseract'))){
+        e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{
+          const clone=res.clone();
+          caches.open(CACHE).then(c=>c.put(e.request,clone));
+          return res;
+        })));
+      }
+    });
+  `;
+  const blob=new Blob([swCode],{type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
+</script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding: 6px; min-height: 100vh; }
+#app { width: 100%; max-width: 440px; padding-bottom: 10px; }
+h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; color: #111; }
+
+#video-container {
+  position: relative; width: 100%; height: 0; padding-top: 100%;
+  background: #111; border-radius: 12px; overflow: hidden; border: 2px solid #ddd;
+}
+#video { position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; display:block; }
+#canvas { display: none; }
+#zone-overlay { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+.zone-box {
+  position: absolute; border: 2px dashed rgba(255,220,0,0.8);
+  border-radius: 4px; display: flex; align-items: flex-start; justify-content: flex-start; padding: 2px;
+}
+.zone-label { background: rgba(0,0,0,0.55); color: white; font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 3px; pointer-events: none; }
+.zone-box.edit-mode { border-style: solid; cursor: move; }
+.zone-resize-handle {
+  position: absolute; bottom: -6px; right: -6px;
+  width: 14px; height: 14px; background: white; border: 2px solid #333;
+  border-radius: 3px; cursor: se-resize; display: none;
+}
+.zone-box.edit-mode .zone-resize-handle { display: block; }
+
+#result-badge {
+  display: none; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  padding: 5px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; white-space: nowrap; z-index: 10;
+}
+.badge-ok { background: #1D9E75; color: white; }
+.badge-ng { background: #E24B4A; color: white; }
+.badge-wait { background: rgba(0,0,0,0.55); color: white; }
+
+#status-bar {
+  margin-top: 6px; padding: 8px 12px; border-radius: 12px;
+  border: 1px solid #ddd; background: white;
+  display: flex; align-items: center; gap: 8px; min-height: 46px;
+}
+#status-icon { font-size: 22px; width: 28px; text-align: center; flex-shrink: 0; }
+#status-title { font-size: 13px; font-weight: 600; color: #111; }
+#status-sub { font-size: 10px; color: #888; margin-top: 1px; }
+
+#btn-row { display: flex; gap: 6px; margin-top: 6px; }
+#btn-start, #btn-stop { flex: 1; padding: 10px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+#btn-start { background: #1D9E75; color: white; }
+#btn-stop { background: #eee; color: #333; display: none; }
+#btn-mirror { flex: 0 0 auto; padding: 10px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: #eee; color: #333; display: none; }
+#btn-mirror.active { background: #1D9E75; color: white; }
+
+#btn-alarm-stop {
+  width: 100%; padding: 11px; border-radius: 10px; font-size: 15px; font-weight: 700;
+  cursor: pointer; border: none; background: #E24B4A; color: white; display: none; margin-top: 6px;
+  animation: pulse 0.6s infinite alternate;
+}
+@keyframes pulse { from{opacity:1;} to{opacity:0.6;} }
+
+#check-result-panel { margin-top: 6px; border-radius: 12px; border: 1px solid #ddd; background: white; overflow: hidden; display: none; }
+#check-result-title { padding: 8px 12px; font-size: 12px; font-weight: 700; background: #f8f8f8; border-bottom: 1px solid #eee; color: #333; }
+.check-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid #f0f0f0; }
+.check-item:last-child { border-bottom: none; }
+.check-badge { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+.check-label { flex: 1; color: #333; font-size: 11px; }
+.check-status { font-size: 11px; font-weight: 700; }
+.s-ok { color: #1D9E75; } .s-ng { color: #E24B4A; } .s-wait { color: #888; }
+
+#production-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: stretch; }
+.count-card { padding: 7px 10px; border-radius: 10px; border: 1px solid #ddd; background: white; text-align: center; }
+.count-label { font-size: 11px; color: #888; }
+.count-val { font-size: 22px; font-weight: 700; margin-top: 1px; }
+.ok-val { color: #1D9E75; } .ng-val { color: #E24B4A; }
+
+/* OCR設定パネル */
+#ocr-settings { margin-top: 6px; padding: 10px 12px; background: white; border-radius: 10px; border: 1px solid #ddd; }
+#ocr-settings-title { font-size: 12px; font-weight: 700; color: #333; margin-bottom: 8px; }
+.setting-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.setting-row:last-child { margin-bottom: 0; }
+.setting-label { font-size: 11px; color: #555; flex-shrink: 0; width: 90px; }
+.setting-input { flex: 1; padding: 6px 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 12px; background: #fafafa; }
+.toggle-row { display: flex; align-items: center; gap: 8px; }
+.toggle-btn { padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid #ddd; background: #f0f0f0; color: #888; }
+.toggle-btn.active { background: #1D9E75; color: white; border-color: #1D9E75; }
+
+#btn-edit-zone {
+  width:100%; padding:8px; margin-top:6px; border-radius:10px;
+  font-size:13px; font-weight:600; cursor:pointer;
+  border:1px dashed #aaa; background:#fff; color:#555;
+}
+#btn-edit-zone.active { background:#2563EB; color:white; border:none; }
+#edit-hint { display:none; margin-top:4px; padding:8px 12px; background:#fffbe6; border-radius:8px; border:1px solid #ffe58f; font-size:11px; color:#7d6608; line-height:1.6; }
+
+#debug-panel { margin-top: 6px; padding: 8px 12px; background: #f0f0f0; border-radius: 10px; font-size: 10px; color: #555; display: none; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>組付け検査 <span style="font-size:10px;background:#059669;color:white;padding:2px 6px;border-radius:6px;margin-left:4px;">v5 OCR</span></h1>
+
+  <!-- 生産数・OK・NG・リセット -->
+  <div id="production-row">
+    <div class="count-card" style="flex:1;"><div class="count-label">生産数</div><div class="count-val" id="prod-count" style="color:#7C3AED;">0</div></div>
+    <div class="count-card" style="flex:1;"><div class="count-label">OK 件数</div><div class="count-val ok-val" id="ok-count">0</div></div>
+    <div class="count-card" style="flex:1;"><div class="count-label">NG 件数</div><div class="count-val ng-val" id="ng-count">0</div></div>
+    <button onclick="resetAllCounts()" style="flex:0 0 auto;padding:8px 10px;border-radius:10px;border:none;background:#eee;color:#333;font-size:11px;font-weight:600;cursor:pointer;align-self:center;">🔄<br>リセット</button>
+  </div>
+
+  <!-- OCR設定パネル -->
+  <div id="ocr-settings">
+    <div id="ocr-settings-title">🔤 OCR検査設定</div>
+    <div class="setting-row">
+      <span class="setting-label">正常キーワード</span>
+      <input type="text" class="setting-input" id="kw-normal" placeholder="例：GEAR MISSION" maxlength="30">
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">上下逆判定</span>
+      <div class="toggle-row">
+        <button class="toggle-btn active" id="toggle-flip-on" onclick="setFlipMode(true)">ON</button>
+        <button class="toggle-btn" id="toggle-flip-off" onclick="setFlipMode(false)">OFF</button>
+        <span style="font-size:10px;color:#aaa;">ONは上下逆をNG判定</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- カメラ映像 -->
+  <div id="video-container" style="margin-top:6px;">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <div id="zone-overlay">
+      <div class="zone-box" id="zone-gm"><span class="zone-label" id="zone-label-gm">OCR枠</span><div class="zone-resize-handle"></div></div>
+    </div>
+    <div id="result-badge" class="badge-wait">カメラを起動してください</div>
+  </div>
+
+  <div id="status-bar">
+    <div id="status-icon">📷</div>
+    <div id="status-text">
+      <div id="status-title">カメラを起動してください</div>
+      <div id="status-sub">「検査開始」ボタンを押してください</div>
+    </div>
+  </div>
+
+  <div id="btn-row">
+    <button id="btn-start" onclick="startCamera()">▶ 検査開始</button>
+    <button id="btn-stop" onclick="stopCamera()">⏹ 停止</button>
+    <button id="btn-mirror" onclick="toggleMirror()">📷前面</button>
+  </div>
+
+  <button id="btn-alarm-stop" onclick="stopAlarm()">🔕 アラーム停止（タップして解除）</button>
+
+  <div id="check-result-panel">
+    <div id="check-result-title">📋 検査結果</div>
+    <div class="check-item" id="r-item-ocr1"><span class="check-badge">―</span><span class="check-label" id="ocr1-label">① キーワード検出（OCR）</span><span class="check-status s-wait">―</span></div>
+    <div class="check-item" id="r-item-ocr2"><span class="check-badge">―</span><span class="check-label">② 上下方向（OCR）</span><span class="check-status s-wait">―</span></div>
+  </div>
+
+  <!-- 枠調整ボタン -->
+  <button id="btn-edit-zone" onclick="toggleEditMode()" style="margin-top:6px;">✏️ 枠の位置・サイズを調整する</button>
+  <div id="edit-hint">📌 枠をドラッグ→移動　角の白い四角をドラッグ→サイズ変更<br>調整完了後「調整完了」を押すと保存されます。</div>
+
+  <div id="debug-panel">
+    <strong>🔬 OCRデバッグ</strong><br>
+    正位置スコア: <span id="dbg-normal">-</span><br>
+    180°回転スコア: <span id="dbg-flipped">-</span><br>
+    正位置テキスト: <span id="dbg-text-n">-</span><br>
+    回転テキスト: <span id="dbg-text-f">-</span>
+  </div>
+  <button onclick="toggleDebug()" style="width:100%;margin-top:6px;padding:6px;border-radius:8px;border:1px solid #ccc;background:#fff;font-size:11px;color:#888;cursor:pointer;">🔬 デバッグ表示 ON/OFF</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+<script>
+const ZONE_STORAGE_KEY='gm_v5_zone';
+const SETTINGS_STORAGE_KEY='gm_v5_settings';
+
+let ZONE_GM=[0.05,0.03,0.94,0.30];
+let stream=null,scanning=false,intervalId=null;
+let okCount=0,ngCount=0,prodCount=0;
+let workerReady=false,worker=null,audioCtx=null;
+let lastResult=null,alarmActive=false,alarmInterval=null,mirrored=true;
+let editMode=false,debugVisible=false;
+let isJudging=false;
+
+// 静止検知
+let prevGmFrame=null,stableFrameCount=0,judged=false;
+const STABLE_THRESHOLD=3;
+const MOTION_THRESHOLD=15;
+
+// OCR設定
+let flipMode=true; // 上下逆判定ON/OFF
+
+const video=document.getElementById('video');
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+const statusIcon=document.getElementById('status-icon');
+const statusTitle=document.getElementById('status-title');
+const statusSub=document.getElementById('status-sub');
+const statusBar=document.getElementById('status-bar');
+const resultBadge=document.getElementById('result-badge');
+const okEl=document.getElementById('ok-count');
+const ngEl=document.getElementById('ng-count');
+const prodEl=document.getElementById('prod-count');
+
+// ===== OCR設定 =====
+function setFlipMode(val){
+  flipMode=val;
+  document.getElementById('toggle-flip-on').classList.toggle('active',val);
+  document.getElementById('toggle-flip-off').classList.toggle('active',!val);
+  saveSettings();
+  // r-item-ocr2の表示切替
+  document.getElementById('r-item-ocr2').style.display=val?'flex':'none';
+}
+function getKeywords(){
+  const normal=document.getElementById('kw-normal').value.trim().toUpperCase();
+  return{normal};
+}
+function saveSettings(){
+  try{
+    localStorage.setItem(SETTINGS_STORAGE_KEY,JSON.stringify({
+      kwNormal:document.getElementById('kw-normal').value,
+      flipMode
+    }));
+  }catch(e){}
+  const kw=document.getElementById('kw-normal').value.trim()||'OCR枠';
+  document.getElementById('zone-label-gm').textContent=kw;
+  document.getElementById('ocr1-label').textContent='① '+kw+' 検出（OCR）';
+}
+function loadSettings(){
+  try{
+    const s=localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if(s){
+      const d=JSON.parse(s);
+      if(d.kwNormal)document.getElementById('kw-normal').value=d.kwNormal;
+      flipMode=d.flipMode!==undefined?d.flipMode:true;
+    }else{
+      document.getElementById('kw-normal').value='GEAR MISSION';
+    }
+  }catch(e){
+    document.getElementById('kw-normal').value='GEAR MISSION';
+  }
+  setFlipMode(flipMode);
+  saveSettings();
+}
+
+// 設定変更時に自動保存
+document.getElementById('kw-normal').addEventListener('input',saveSettings);
+
+// ===== リセット =====
+function resetAllCounts(){
+  if(!confirm('生産数・OK・NG件数をリセットしますか？'))return;
+  okCount=0;ngCount=0;prodCount=0;
+  okEl.textContent=0;ngEl.textContent=0;prodEl.textContent=0;
+  lastResult=null;prevGmFrame=null;stableFrameCount=0;judged=false;isJudging=false;
+}
+
+// ===== デバッグ =====
+function toggleDebug(){
+  debugVisible=!debugVisible;
+  document.getElementById('debug-panel').style.display=debugVisible?'block':'none';
+}
+
+// ===== 音声 =====
+function getAudioCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function playOK(){
+  try{const ac=getAudioCtx(),o=ac.createOscillator(),g=ac.createGain();
+  o.connect(g);g.connect(ac.destination);
+  o.frequency.setValueAtTime(880,ac.currentTime);o.frequency.setValueAtTime(1100,ac.currentTime+0.1);
+  g.gain.setValueAtTime(1.0,ac.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.4);
+  o.start();o.stop(ac.currentTime+0.4);}catch(e){}
+}
+function playNGBeep(){
+  try{const ac=getAudioCtx();
+  const wave=ac.createWaveShaper();const curve=new Float32Array(256);
+  for(let i=0;i<256;i++){const x=(i*2)/256-1;curve[i]=(Math.PI+400)*x/(Math.PI+400*Math.abs(x));}
+  wave.curve=curve;wave.oversample='4x';
+  const mg=ac.createGain();mg.gain.setValueAtTime(2.0,ac.currentTime);wave.connect(mg);mg.connect(ac.destination);
+  for(let i=0;i<3;i++){const o1=ac.createOscillator(),o2=ac.createOscillator(),g1=ac.createGain();
+  o1.type='sawtooth';o2.type='square';
+  o1.frequency.setValueAtTime(440,ac.currentTime+i*0.25);o2.frequency.setValueAtTime(443,ac.currentTime+i*0.25);
+  g1.gain.setValueAtTime(1.0,ac.currentTime+i*0.25);g1.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+i*0.25+0.22);
+  o1.connect(g1);o2.connect(g1);g1.connect(wave);
+  o1.start(ac.currentTime+i*0.25);o1.stop(ac.currentTime+i*0.25+0.22);
+  o2.start(ac.currentTime+i*0.25);o2.stop(ac.currentTime+i*0.25+0.22);}
+  }catch(e){}
+}
+function startAlarm(){
+  if(alarmActive)return;alarmActive=true;
+  document.getElementById('btn-alarm-stop').style.display='block';
+  playNGBeep();alarmInterval=setInterval(()=>{if(alarmActive)playNGBeep();},1000);
+}
+function stopAlarm(){
+  alarmActive=false;clearInterval(alarmInterval);alarmInterval=null;
+  document.getElementById('btn-alarm-stop').style.display='none';
+  lastResult=null;isJudging=false;setStatus('scanning');
+}
+
+// ===== カメラ =====
+function toggleMirror(){
+  mirrored=!mirrored;
+  const btn=document.getElementById('btn-mirror');
+  btn.classList.toggle('active',mirrored);
+  btn.textContent=mirrored?'📷前面':'🔄背面';
+  restartCamera();
+}
+async function restartCamera(){
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  clearInterval(intervalId);
+  try{
+    try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:mirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}});}
+    catch(e){stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});}
+    video.srcObject=stream;
+    intervalId=setInterval(runInspection,1500);
+  }catch(e){statusSub.textContent='カメラの切り替えに失敗しました';}
+}
+async function startCamera(){
+  try{
+    try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}}});}
+    catch(e){stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}});}
+    video.srcObject=stream;scanning=true;
+    document.getElementById('btn-start').style.display='none';
+    document.getElementById('btn-stop').style.display='block';
+    document.getElementById('btn-mirror').style.display='block';
+    document.getElementById('btn-mirror').classList.add('active');
+    document.getElementById('check-result-panel').style.display='block';
+    resultBadge.style.display='block';
+    setStatus('scanning');
+    if(!workerReady){
+      statusSub.textContent='OCR初期化中...（カメラは映っています）';
+      initWorker();
+    }
+    intervalId=setInterval(runInspection,1500);
+  }catch(e){
+    statusTitle.textContent='カメラへのアクセスを許可してください';
+    statusSub.textContent='ブラウザの設定でカメラを許可してください';
+  }
+}
+function stopCamera(){
+  scanning=false;clearInterval(intervalId);
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  video.srcObject=null;
+  document.getElementById('btn-start').style.display='block';
+  document.getElementById('btn-stop').style.display='none';
+  document.getElementById('btn-mirror').style.display='none';
+  mirrored=true;stopAlarm();setStatus('idle');
+  prevGmFrame=null;stableFrameCount=0;judged=false;isJudging=false;lastResult=null;
+}
+
+// ===== ステータス =====
+function setStatus(type,sub){
+  statusBar.style.border='';resultBadge.style.display='block';resultBadge.className='';
+  if(type==='ok'){
+    statusIcon.textContent='✅';statusTitle.textContent='OK — 正常';statusTitle.style.color='#1D9E75';
+    statusSub.textContent=sub||'全項目正常です';statusBar.style.border='2px solid #1D9E75';
+    resultBadge.className='badge-ok';resultBadge.textContent='✓ OK';
+  }else if(type==='ng'){
+    statusIcon.textContent='🚨';statusTitle.textContent='NG — 要確認！';statusTitle.style.color='#E24B4A';
+    statusSub.textContent=sub||'確認してください';statusBar.style.border='2px solid #E24B4A';
+    resultBadge.className='badge-ng';resultBadge.textContent='✗ NG';
+  }else if(type==='waiting'){
+    statusIcon.textContent='⏳';statusTitle.textContent=sub||'静止確認中...';statusTitle.style.color='#7C3AED';
+    statusSub.textContent='製品が静止するまでお待ちください';
+    resultBadge.className='badge-wait';resultBadge.textContent='確認中...';
+  }else if(type==='scanning'){
+    statusIcon.textContent='🔍';statusTitle.textContent='検査中...';statusTitle.style.color='#111';
+    statusSub.textContent='製品をカメラに映してください';
+    resultBadge.className='badge-wait';resultBadge.textContent='検査中...';
+  }else{
+    statusIcon.textContent='📷';statusTitle.textContent='カメラを起動してください';statusTitle.style.color='#111';
+    statusSub.textContent='「検査開始」ボタンを押してください';resultBadge.style.display='none';
+  }
+}
+function setCheckItemStatus(elemId,status){
+  const item=document.getElementById(elemId);if(!item)return;
+  const badge=item.querySelector('.check-badge'),st=item.querySelector('.check-status');
+  if(status==='ok'){badge.textContent='✅';st.textContent='OK';st.className='check-status s-ok';item.style.background='#f0faf5';}
+  else if(status==='ng'){badge.textContent='❌';st.textContent='NG！';st.className='check-status s-ng';item.style.background='#fff0f0';}
+  else{badge.textContent='―';st.textContent='―';st.className='check-status s-wait';item.style.background='';}
+}
+
+// ===== OCR =====
+async function initWorker(){
+  if(workerReady)return;
+  try{
+    worker=await Tesseract.createWorker('eng',1,{
+      logger:()=>{},
+      workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/worker.min.js',
+      corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core-simd-lstm.wasm.js',
+      langPath:'https://tessdata.projectnaptha.com/4.0.0',
+    });
+    workerReady=true;
+    if(scanning)statusSub.textContent='製品をカメラに映してください';
+  }catch(e){
+    try{worker=await Tesseract.createWorker('eng',1,{logger:()=>{}});workerReady=true;}
+    catch(e2){if(scanning)statusSub.textContent='OCRエンジンの初期化に失敗しました';}
+  }
+}
+
+// ===== 静止検知 =====
+function getGmFrameData(){
+  const w=canvas.width,h=canvas.height,z=ZONE_GM;
+  const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
+  const tmp=document.createElement('canvas');tmp.width=32;tmp.height=16;
+  tmp.getContext('2d').drawImage(canvas,zx,zy,zw,zh,0,0,32,16);
+  return tmp.getContext('2d').getImageData(0,0,32,16);
+}
+function calcFrameDiff(f1,f2){
+  let diff=0;const len=f1.data.length;
+  for(let i=0;i<len;i+=4){diff+=Math.abs(f1.data[i]-f2.data[i])+Math.abs(f1.data[i+1]-f2.data[i+1])+Math.abs(f1.data[i+2]-f2.data[i+2]);}
+  return diff/(32*16*3);
+}
+
+// ===== 検査処理 =====
+async function runInspection(){
+  if(!scanning||!workerReady)return;
+  // カメラ自動再接続
+  if(!stream||video.readyState===0||video.videoWidth===0){
+    if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+    try{
+      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:mirrored?'user':'environment',width:{ideal:1280},height:{ideal:1280}}}).catch(()=>
+        navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:1280}}})
+      );
+      stream=s;video.srcObject=s;
+    }catch(e){}
+    return;
+  }
+  if(video.videoWidth===0)return;
+  canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx.drawImage(video,0,0);
+
+  // 静止検知
+  const currentGmFrame=getGmFrameData();
+  if(prevGmFrame){
+    const diff=calcFrameDiff(prevGmFrame,currentGmFrame);
+    if(diff>MOTION_THRESHOLD){
+      stableFrameCount=0;
+      if(judged){judged=false;isJudging=false;lastResult=null;if(!alarmActive)setStatus('scanning');}
+    }else{
+      if(!judged&&!isJudging){
+        stableFrameCount++;
+        if(stableFrameCount>=STABLE_THRESHOLD){
+          await doJudge();
+        }else{
+          if(!alarmActive)setStatus('waiting',`静止確認中... ${stableFrameCount}/${STABLE_THRESHOLD}`);
+        }
+      }
+    }
+  }
+  prevGmFrame=currentGmFrame;
+}
+
+// ===== 判定処理 =====
+async function doJudge(){
+  if(isJudging)return;
+  isJudging=true;judged=true;
+  setStatus('waiting','判定中...');
+
+  const{normal:kwNormal}=getKeywords();
+
+  // キーワードが空の場合はスキップ
+  if(!kwNormal){
+    setCheckItemStatus('r-item-ocr1',null);
+    setCheckItemStatus('r-item-ocr2',null);
+    isJudging=false;judged=false;return;
+  }
+
+  try{
+    const w=canvas.width,h=canvas.height,z=ZONE_GM;
+    const zx=Math.round(z[1]*w),zy=Math.round(z[0]*h),zw=Math.round(z[2]*w),zh=Math.round(z[3]*h);
+
+    // 前処理（2倍拡大・二値化）
+    const zoneCanvas=document.createElement('canvas');zoneCanvas.width=zw*2;zoneCanvas.height=zh*2;
+    const zc=zoneCanvas.getContext('2d');zc.drawImage(canvas,zx,zy,zw,zh,0,0,zw*2,zh*2);
+    const id=zc.getImageData(0,0,zoneCanvas.width,zoneCanvas.height);
+    for(let i=0;i<id.data.length;i+=4){const g=0.299*id.data[i]+0.587*id.data[i+1]+0.114*id.data[i+2];id.data[i]=id.data[i+1]=id.data[i+2]=(g<128?0:255);}
+    zc.putImageData(id,0,0);
+
+    // 上下逆判定ONの場合は180°回転版も作成
+    let tN='',tF='';
+    if(flipMode){
+      const rotCanvas=document.createElement('canvas');rotCanvas.width=zoneCanvas.width;rotCanvas.height=zoneCanvas.height;
+      const rc=rotCanvas.getContext('2d');rc.translate(rotCanvas.width/2,rotCanvas.height/2);rc.rotate(Math.PI);rc.drawImage(zoneCanvas,-rotCanvas.width/2,-rotCanvas.height/2);
+      const [rNormal,rFlipped]=await Promise.all([worker.recognize(zoneCanvas.toDataURL()),worker.recognize(rotCanvas.toDataURL())]);
+      tN=rNormal.data.text.toUpperCase().replace(/\s+/g,'');
+      tF=rFlipped.data.text.toUpperCase().replace(/\s+/g,'');
+    }else{
+      const rNormal=await worker.recognize(zoneCanvas.toDataURL());
+      tN=rNormal.data.text.toUpperCase().replace(/\s+/g,'');
+    }
+
+    // キーワードリスト（スペース・カンマ区切り対応）
+    const keywords=kwNormal.split(/[\s,、]+/).filter(k=>k.length>0);
+
+    // 正常キーワードスコア
+    const scoreN=keywords.filter(k=>tN.includes(k)).length;
+    const scoreF=flipMode?keywords.filter(k=>tF.includes(k)).length:0;
+
+    if(debugVisible){
+      document.getElementById('dbg-normal').textContent=scoreN;
+      document.getElementById('dbg-flipped').textContent=scoreF;
+      document.getElementById('dbg-text-n').textContent=tN.slice(0,40);
+      document.getElementById('dbg-text-f').textContent=tF.slice(0,40);
+    }
+
+    if(scoreN===0&&scoreF===0){
+      // 読めない→判定不能
+      setCheckItemStatus('r-item-ocr1',null);
+      setCheckItemStatus('r-item-ocr2',null);
+      isJudging=false;judged=false;return;
+    }
+
+    let hasNG=false;
+
+    // 正常キーワード判定（読めたらOK・読めなかったらNG）
+    if(scoreN>0){
+      setCheckItemStatus('r-item-ocr1','ok');
+    }else{
+      setCheckItemStatus('r-item-ocr1','ng');hasNG=true;
+    }
+
+    // 上下逆判定
+    if(flipMode){
+      if(scoreF>scoreN){
+        setCheckItemStatus('r-item-ocr2','ng');hasNG=true;
+      }else{
+        setCheckItemStatus('r-item-ocr2','ok');
+      }
+    }
+
+    prodCount++;prodEl.textContent=prodCount;
+    if(hasNG){
+      ngCount++;ngEl.textContent=ngCount;
+      const msgs=[];
+      if(document.getElementById('r-item-ocr1').querySelector('.check-status').textContent==='NG！')msgs.push('キーワード未検出');
+      if(flipMode&&document.getElementById('r-item-ocr2').querySelector('.check-status').textContent==='NG！')msgs.push('上下逆');
+      setStatus('ng',msgs.join('・'));startAlarm();
+    }else{
+      okCount++;okEl.textContent=okCount;setStatus('ok');playOK();
+    }
+  }catch(e){judged=false;}
+  isJudging=false;
+}
+
+// ===== 枠調整 =====
+function toggleEditMode(){
+  editMode=!editMode;
+  const btn=document.getElementById('btn-edit-zone');
+  const hint=document.getElementById('edit-hint');
+  const overlay=document.getElementById('zone-overlay');
+  if(editMode){
+    btn.textContent='✅ 調整完了（タップして保存）';btn.classList.add('active');
+    hint.style.display='block';overlay.style.pointerEvents='auto';
+    document.querySelectorAll('.zone-box').forEach(z=>z.classList.add('edit-mode'));
+  }else{
+    btn.textContent='✏️ 枠の位置・サイズを調整する';btn.classList.remove('active');
+    hint.style.display='none';overlay.style.pointerEvents='none';
+    document.querySelectorAll('.zone-box').forEach(z=>z.classList.remove('edit-mode'));
+    saveZonePosition();
+  }
+}
+function saveZonePosition(){
+  const container=document.getElementById('video-container');
+  const cw=container.offsetWidth,ch=container.offsetHeight;
+  const el=document.getElementById('zone-gm');
+  ZONE_GM=[parseFloat(el.style.top)/ch,parseFloat(el.style.left)/cw,parseFloat(el.style.width)/cw,parseFloat(el.style.height)/ch];
+  try{localStorage.setItem(ZONE_STORAGE_KEY,JSON.stringify(ZONE_GM));}catch(e){}
+  alert('✅ 枠の位置を保存しました！');
+}
+function loadZonePosition(){
+  const container=document.getElementById('video-container');
+  const cw=container.offsetWidth||1,ch=container.offsetHeight||1;
+  try{const saved=localStorage.getItem(ZONE_STORAGE_KEY);if(saved)ZONE_GM=JSON.parse(saved);}catch(e){}
+  const z=ZONE_GM,el=document.getElementById('zone-gm');
+  el.style.top=(z[0]*ch)+'px';el.style.left=(z[1]*cw)+'px';
+  el.style.width=(z[2]*cw)+'px';el.style.height=(z[3]*ch)+'px';
+}
+function initZoneDrag(){
+  const zone=document.getElementById('zone-gm');
+  const handle=zone.querySelector('.zone-resize-handle');
+  const container=document.getElementById('video-container');
+  let dragging=false,resizing=false,startX,startY,startL,startT,startW,startH;
+  zone.addEventListener('touchstart',e=>{
+    if(!editMode||e.target===handle)return;
+    dragging=true;const t=e.touches[0];startX=t.clientX;startY=t.clientY;
+    startL=parseFloat(zone.style.left)||0;startT=parseFloat(zone.style.top)||0;e.stopPropagation();
+  },{passive:true});
+  zone.addEventListener('touchmove',e=>{
+    if(!dragging||!editMode)return;const t=e.touches[0];
+    const dx=t.clientX-startX,dy=t.clientY-startY;
+    const cw=container.offsetWidth,ch=container.offsetHeight;
+    zone.style.left=Math.max(0,Math.min(cw-parseFloat(zone.style.width),startL+dx))+'px';
+    zone.style.top=Math.max(0,Math.min(ch-parseFloat(zone.style.height),startT+dy))+'px';
+    e.preventDefault();
+  },{passive:false});
+  zone.addEventListener('touchend',()=>{dragging=false;});
+  handle.addEventListener('touchstart',e=>{
+    if(!editMode)return;resizing=true;const t=e.touches[0];
+    startX=t.clientX;startY=t.clientY;startW=parseFloat(zone.style.width)||50;startH=parseFloat(zone.style.height)||50;
+    e.stopPropagation();
+  },{passive:true});
+  handle.addEventListener('touchmove',e=>{
+    if(!resizing||!editMode)return;const t=e.touches[0];
+    const dx=t.clientX-startX,dy=t.clientY-startY;
+    const cw=container.offsetWidth,ch=container.offsetHeight;
+    zone.style.width=Math.max(30,Math.min(cw-parseFloat(zone.style.left),startW+dx))+'px';
+    zone.style.height=Math.max(20,Math.min(ch-parseFloat(zone.style.top),startH+dy))+'px';
+    e.preventDefault();
+  },{passive:false});
+  handle.addEventListener('touchend',()=>{resizing=false;});
+  zone.addEventListener('mousedown',e=>{
+    if(!editMode||e.target===handle)return;dragging=true;
+    startX=e.clientX;startY=e.clientY;startL=parseFloat(zone.style.left)||0;startT=parseFloat(zone.style.top)||0;e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(dragging&&editMode){const dx=e.clientX-startX,dy=e.clientY-startY;const cw=container.offsetWidth,ch=container.offsetHeight;
+    zone.style.left=Math.max(0,Math.min(cw-parseFloat(zone.style.width),startL+dx))+'px';
+    zone.style.top=Math.max(0,Math.min(ch-parseFloat(zone.style.height),startT+dy))+'px';}
+    if(resizing&&editMode){const dx=e.clientX-startX,dy=e.clientY-startY;const cw=container.offsetWidth,ch=container.offsetHeight;
+    zone.style.width=Math.max(30,Math.min(cw-parseFloat(zone.style.left),startW+dx))+'px';
+    zone.style.height=Math.max(20,Math.min(ch-parseFloat(zone.style.top),startH+dy))+'px';}
+  });
+  document.addEventListener('mouseup',()=>{dragging=false;resizing=false;});
+  handle.addEventListener('mousedown',e=>{
+    if(!editMode)return;resizing=true;startX=e.clientX;startY=e.clientY;
+    startW=parseFloat(zone.style.width)||50;startH=parseFloat(zone.style.height)||50;
+    e.preventDefault();e.stopPropagation();
+  });
+}
+
+// ===== 初期化 =====
+initWorker();
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    loadZonePosition();
+    initZoneDrag();
+    loadSettings();
+  },100);
+});
+</script>
+</body>
+</html>
