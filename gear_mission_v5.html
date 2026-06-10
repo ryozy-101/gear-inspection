@@ -123,85 +123,142 @@ h1 { font-size: 14px; font-weight: 600; text-align: center; padding: 6px 0; colo
 #edit-hint { display:none; margin-top:4px; padding:8px 12px; background:#fffbe6; border-radius:8px; border:1px solid #ffe58f; font-size:11px; color:#7d6608; line-height:1.6; }
 
 #debug-panel { margin-top: 6px; padding: 8px 12px; background: #f0f0f0; border-radius: 10px; font-size: 10px; color: #555; display: none; line-height: 1.7; }
+
+/* ===== 横向きレイアウト ===== */
+@media (orientation: landscape) {
+  body { padding: 4px; align-items: flex-start; }
+  #app { max-width: 100%; display: flex; flex-direction: column; }
+  h1 { font-size: 12px; padding: 3px 0; }
+
+  #landscape-wrapper {
+    display: flex; gap: 6px; align-items: flex-start; width: 100%;
+  }
+
+  /* 左カラム：カメラ */
+  #left-col {
+    flex: 0 0 auto;
+    width: calc(100vh - 80px);
+    max-width: 50vw;
+  }
+  #video-container {
+    margin-top: 0 !important;
+  }
+
+  /* 右カラム：設定・ボタン・結果 */
+  #right-col {
+    flex: 1; display: flex; flex-direction: column; gap: 4px;
+    min-width: 0; overflow-y: auto;
+    max-height: calc(100vh - 60px);
+  }
+
+  #production-row { margin-bottom: 0; }
+  .count-val { font-size: 16px; }
+  #ocr-settings { margin-top: 0; padding: 6px 10px; }
+  #ocr-settings-title { margin-bottom: 4px; }
+  .setting-row { margin-bottom: 4px; }
+  #status-bar { margin-top: 0; min-height: 36px; padding: 4px 8px; }
+  #status-title { font-size: 12px; }
+  #btn-row { margin-top: 0; }
+  #btn-start, #btn-stop { padding: 8px; font-size: 13px; }
+  #btn-alarm-stop { margin-top: 0; padding: 8px; font-size: 13px; }
+  #check-result-panel { margin-top: 0; }
+  .check-item { padding: 5px 10px; }
+  #btn-edit-zone { margin-top: 0; padding: 6px; font-size: 12px; }
+  #debug-panel { margin-top: 0; }
+}
+
+/* 縦向きは今まで通り */
+@media (orientation: portrait) {
+  #landscape-wrapper { display: contents; }
+  #left-col { display: contents; }
+  #right-col { display: contents; }
+}
 </style>
 </head>
 <body>
 <div id="app">
   <h1>組付け検査 <span style="font-size:10px;background:#059669;color:white;padding:2px 6px;border-radius:6px;margin-left:4px;">v5 OCR</span></h1>
 
-  <!-- 生産数・OK・NG・リセット -->
-  <div id="production-row">
-    <div class="count-card" style="flex:1;"><div class="count-label">生産数</div><div class="count-val" id="prod-count" style="color:#7C3AED;">0</div></div>
-    <div class="count-card" style="flex:1;"><div class="count-label">OK 件数</div><div class="count-val ok-val" id="ok-count">0</div></div>
-    <div class="count-card" style="flex:1;"><div class="count-label">NG 件数</div><div class="count-val ng-val" id="ng-count">0</div></div>
-    <button onclick="resetAllCounts()" style="flex:0 0 auto;padding:8px 10px;border-radius:10px;border:none;background:#eee;color:#333;font-size:11px;font-weight:600;cursor:pointer;align-self:center;">🔄<br>リセット</button>
-  </div>
-
-  <!-- OCR設定パネル -->
-  <div id="ocr-settings">
-    <div id="ocr-settings-title">🔤 OCR検査設定</div>
-    <div class="setting-row">
-      <span class="setting-label">正常キーワード</span>
-      <input type="text" class="setting-input" id="kw-normal" placeholder="例：GEAR MISSION" maxlength="30">
-    </div>
-    <div style="font-size:10px;color:#aaa;margin-bottom:6px;padding-left:4px;">💡 短いキーワード推奨（例：「18」「GEAR」）。読み間違えやすい文字（4→A等）は避けると精度UP</div>
-    <div class="setting-row">
-      <span class="setting-label">上下逆判定</span>
-      <div class="toggle-row">
-        <button class="toggle-btn active" id="toggle-flip-on" onclick="setFlipMode(true)">ON</button>
-        <button class="toggle-btn" id="toggle-flip-off" onclick="setFlipMode(false)">OFF</button>
-        <span style="font-size:10px;color:#aaa;">ONは上下逆をNG判定</span>
+  <div id="landscape-wrapper">
+    <!-- 左カラム：カメラ映像 -->
+    <div id="left-col">
+      <div id="video-container" style="margin-top:6px;">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="canvas"></canvas>
+        <div id="zone-overlay">
+          <div class="zone-box" id="zone-gm"><span class="zone-label" id="zone-label-gm">OCR枠</span><div class="zone-resize-handle"></div></div>
+        </div>
+        <div id="result-badge" class="badge-wait">カメラを起動してください</div>
       </div>
     </div>
-  </div>
 
-  <!-- カメラ映像 -->
-  <div id="video-container" style="margin-top:6px;">
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="canvas"></canvas>
-    <div id="zone-overlay">
-      <div class="zone-box" id="zone-gm"><span class="zone-label" id="zone-label-gm">OCR枠</span><div class="zone-resize-handle"></div></div>
-    </div>
-    <div id="result-badge" class="badge-wait">カメラを起動してください</div>
-  </div>
+    <!-- 右カラム：設定・ボタン・結果 -->
+    <div id="right-col">
+      <!-- 生産数・OK・NG・リセット -->
+      <div id="production-row">
+        <div class="count-card" style="flex:1;"><div class="count-label">生産数</div><div class="count-val" id="prod-count" style="color:#7C3AED;">0</div></div>
+        <div class="count-card" style="flex:1;"><div class="count-label">OK</div><div class="count-val ok-val" id="ok-count">0</div></div>
+        <div class="count-card" style="flex:1;"><div class="count-label">NG</div><div class="count-val ng-val" id="ng-count">0</div></div>
+        <button onclick="resetAllCounts()" style="flex:0 0 auto;padding:8px 10px;border-radius:10px;border:none;background:#eee;color:#333;font-size:11px;font-weight:600;cursor:pointer;align-self:center;">🔄<br>リセット</button>
+      </div>
 
-  <div id="status-bar">
-    <div id="status-icon">📷</div>
-    <div id="status-text">
-      <div id="status-title">カメラを起動してください</div>
-      <div id="status-sub">「検査開始」ボタンを押してください</div>
-    </div>
-  </div>
+      <!-- OCR設定パネル -->
+      <div id="ocr-settings">
+        <div id="ocr-settings-title">🔤 OCR検査設定</div>
+        <div class="setting-row">
+          <span class="setting-label">正常キーワード</span>
+          <input type="text" class="setting-input" id="kw-normal" placeholder="例：GEAR MISSION" maxlength="30">
+        </div>
+        <div style="font-size:10px;color:#aaa;margin-bottom:6px;padding-left:4px;">💡 短いキーワード推奨（例：「18」「GEAR」）。読み間違えやすい文字（4→A等）は避けると精度UP</div>
+        <div class="setting-row">
+          <span class="setting-label">上下逆判定</span>
+          <div class="toggle-row">
+            <button class="toggle-btn active" id="toggle-flip-on" onclick="setFlipMode(true)">ON</button>
+            <button class="toggle-btn" id="toggle-flip-off" onclick="setFlipMode(false)">OFF</button>
+            <span style="font-size:10px;color:#aaa;">ONは上下逆をNG判定</span>
+          </div>
+        </div>
+      </div>
 
-  <div id="btn-row">
-    <button id="btn-start" onclick="startCamera()">▶ 検査開始</button>
-    <button id="btn-stop" onclick="stopCamera()">⏹ 停止</button>
-    <button id="btn-mirror" onclick="toggleMirror()">📷前面</button>
-  </div>
+      <div id="status-bar">
+        <div id="status-icon">📷</div>
+        <div id="status-text">
+          <div id="status-title">カメラを起動してください</div>
+          <div id="status-sub">「検査開始」ボタンを押してください</div>
+        </div>
+      </div>
 
-  <button id="btn-alarm-stop" onclick="stopAlarm()">🔕 アラーム停止（タップして解除）</button>
+      <div id="btn-row">
+        <button id="btn-start" onclick="startCamera()">▶ 検査開始</button>
+        <button id="btn-stop" onclick="stopCamera()">⏹ 停止</button>
+        <button id="btn-mirror" onclick="toggleMirror()">📷前面</button>
+      </div>
 
-  <div id="check-result-panel">
-    <div id="check-result-title">📋 検査結果</div>
-    <div class="check-item" id="r-item-ocr1"><span class="check-badge">―</span><span class="check-label" id="ocr1-label">① キーワード検出（OCR）</span><span class="check-status s-wait">―</span></div>
-    <div class="check-item" id="r-item-ocr2"><span class="check-badge">―</span><span class="check-label">② 上下方向（OCR）</span><span class="check-status s-wait">―</span></div>
-  </div>
+      <button id="btn-alarm-stop" onclick="stopAlarm()">🔕 アラーム停止（タップして解除）</button>
 
-  <!-- 枠調整ボタン -->
-  <button id="btn-edit-zone" onclick="toggleEditMode()" style="margin-top:6px;">✏️ 枠の位置・サイズを調整する</button>
-  <div id="edit-hint">📌 枠をドラッグ→移動　角の白い四角をドラッグ→サイズ変更<br>調整完了後「調整完了」を押すと保存されます。</div>
+      <div id="check-result-panel">
+        <div id="check-result-title">📋 検査結果</div>
+        <div class="check-item" id="r-item-ocr1"><span class="check-badge">―</span><span class="check-label" id="ocr1-label">① キーワード検出（OCR）</span><span class="check-status s-wait">―</span></div>
+        <div class="check-item" id="r-item-ocr2"><span class="check-badge">―</span><span class="check-label">② 上下方向（OCR）</span><span class="check-status s-wait">―</span></div>
+      </div>
 
-  <div id="debug-panel">
-    <strong>🔬 OCRデバッグ</strong><br>
-    正位置スコア: <span id="dbg-normal">-</span><br>
-    180°回転スコア: <span id="dbg-flipped">-</span><br>
-    正位置テキスト: <span id="dbg-text-n">-</span><br>
-    回転テキスト: <span id="dbg-text-f">-</span><br>
-    <strong>📌 最後に読んだテキスト（消えない）</strong><br>
-    <span id="dbg-last-text" style="word-break:break-all;color:#333;background:#fff;padding:4px;border-radius:4px;display:block;margin-top:2px;font-size:11px;">-</span>
-    <button onclick="document.getElementById('dbg-last-text').textContent='-'" style="margin-top:4px;padding:3px 8px;font-size:10px;border:1px solid #ccc;border-radius:4px;background:#f0f0f0;cursor:pointer;">クリア</button>
-  </div>
-  <button onclick="toggleDebug()" style="width:100%;margin-top:6px;padding:6px;border-radius:8px;border:1px solid #ccc;background:#fff;font-size:11px;color:#888;cursor:pointer;">🔬 デバッグ表示 ON/OFF</button>
+      <!-- 枠調整ボタン -->
+      <button id="btn-edit-zone" onclick="toggleEditMode()" style="margin-top:6px;">✏️ 枠の位置・サイズを調整する</button>
+      <div id="edit-hint">📌 枠をドラッグ→移動　角の白い四角をドラッグ→サイズ変更<br>調整完了後「調整完了」を押すと保存されます。</div>
+
+      <div id="debug-panel">
+        <strong>🔬 OCRデバッグ</strong><br>
+        正位置スコア: <span id="dbg-normal">-</span><br>
+        180°回転スコア: <span id="dbg-flipped">-</span><br>
+        正位置テキスト: <span id="dbg-text-n">-</span><br>
+        回転テキスト: <span id="dbg-text-f">-</span><br>
+        <strong>📌 最後に読んだテキスト（消えない）</strong><br>
+        <span id="dbg-last-text" style="word-break:break-all;color:#333;background:#fff;padding:4px;border-radius:4px;display:block;margin-top:2px;font-size:11px;">-</span>
+        <button onclick="document.getElementById('dbg-last-text').textContent='-'" style="margin-top:4px;padding:3px 8px;font-size:10px;border:1px solid #ccc;border-radius:4px;background:#f0f0f0;cursor:pointer;">クリア</button>
+      </div>
+      <button onclick="toggleDebug()" style="width:100%;margin-top:6px;padding:6px;border-radius:8px;border:1px solid #ccc;background:#fff;font-size:11px;color:#888;cursor:pointer;">🔬 デバッグ表示 ON/OFF</button>
+    </div><!-- end right-col -->
+  </div><!-- end landscape-wrapper -->
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
